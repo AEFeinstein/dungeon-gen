@@ -30,6 +30,7 @@ typedef enum
 void printRow(int y, int mazeW, mazeCell_t ** maze);
 void printStack(list_t * stack);
 void fisherYates(doorIdx * arr, int len);
+void mergeSets(dungeon_t * dungeon, int x, int y);
 
 //==============================================================================
 // Defines
@@ -133,6 +134,11 @@ void connectDungeonEllers(dungeon_t * dungeon)
             }
         }
 
+#ifdef DBG_PRINT
+        printf("Starting row %d\n", y);
+        printRow(y, dungeon->w, dungeon->maze);
+#endif
+
         // Then, randomly create LR walls
         for(int x = 0; x < dungeon->w - 1; x++)
         {
@@ -140,6 +146,11 @@ void connectDungeonEllers(dungeon_t * dungeon)
             if((dungeon->maze[x][y].set == dungeon->maze[x+1][y].set) || (rand() % 2))
             {
                 dungeon->maze[x][y].doors[DOOR_RIGHT]->isDoor = false;
+
+#ifdef DBG_PRINT
+                printf("Add LR wall\n");
+                printRow(y, dungeon->w, dungeon->maze);
+#endif
             }
             else
             {
@@ -147,15 +158,12 @@ void connectDungeonEllers(dungeon_t * dungeon)
                 dungeon->maze[x][y].doors[DOOR_RIGHT]->isDoor = true;
 
                 // Merge the sets by overwriting all olds with news in this row
-                int oldSet = dungeon->maze[x+1][y].set;
-                int newSet = dungeon->maze[x][y].set;
-                for(int mergeX = x + 1; mergeX < dungeon->w; mergeX++)
-                {
-                    if(oldSet == dungeon->maze[mergeX][y].set)
-                    {
-                        dungeon->maze[mergeX][y].set = newSet;
-                    }
-                }
+                mergeSets(dungeon, x, y);
+
+#ifdef DBG_PRINT
+                printf("Add LR door\n");
+                printRow(y, dungeon->w, dungeon->maze);
+#endif
             }
         }
 
@@ -177,10 +185,20 @@ void connectDungeonEllers(dungeon_t * dungeon)
 
                     // Record this set as connected
                     setsWithDoors[swdIdx++] = dungeon->maze[x][y].set;
+
+#ifdef DBG_PRINT
+                    printf("Add UD door\n");
+                    printRow(y, dungeon->w, dungeon->maze);
+#endif
                 }
                 else
                 {
                     dungeon->maze[x][y].doors[DOOR_DOWN]->isDoor = false;
+
+#ifdef DBG_PRINT
+                    printf("Add UD wall\n");
+                    printRow(y, dungeon->w, dungeon->maze);
+#endif
                 }
             }
 
@@ -206,6 +224,11 @@ void connectDungeonEllers(dungeon_t * dungeon)
                     dungeon->maze[x][y + 1].set = dungeon->maze[x][y].set;
 
                     setsWithDoors[swdIdx++] = dungeon->maze[x][y].set;
+
+#ifdef DBG_PRINT
+                    printf("Add UD wall (mandatory)\n");
+                    printRow(y, dungeon->w, dungeon->maze);
+#endif
                 }
             }
         }
@@ -217,20 +240,52 @@ void connectDungeonEllers(dungeon_t * dungeon)
                 if(dungeon->maze[x][y].set != dungeon->maze[x+1][y].set)
                 {
                     // Merge the sets by overwriting all olds with news in this row
-                    int oldSet = dungeon->maze[x+1][y].set;
-                    int newSet = dungeon->maze[x][y].set;
-                    for(int mergeX = x + 1; mergeX < dungeon->w; mergeX++)
-                    {
-                        if(oldSet == dungeon->maze[mergeX][y].set)
-                        {
-                            dungeon->maze[mergeX][y].set = newSet;
-                        }
-                    }
+                    mergeSets(dungeon, x, y);
                     dungeon->maze[x][y].doors[DOOR_RIGHT]->isDoor = true;
+
+#ifdef DBG_PRINT
+                    printf("Add LR wall (last row)\n");
+                    printRow(y, dungeon->w, dungeon->maze);
+#endif
                 }
             }
         }
+#ifdef DBG_PRINT
+        printf("Final\n");
+        printRow(y, dungeon->w, dungeon->maze);
+        printf("\n\n");
+#endif
     }
+}
+
+/**
+ * @brief TODO doc
+ * 
+ * @param dungeon 
+ * @param x 
+ * @param y 
+ */
+void mergeSets(dungeon_t * dungeon, int x, int y)
+{
+	int newSet, oldSet;
+	if (dungeon->maze[x][y].set < dungeon->maze[x+1][y].set)
+	{
+		newSet = dungeon->maze[x][y].set;
+		oldSet = dungeon->maze[x+1][y].set;
+	}
+	else
+	{
+		newSet = dungeon->maze[x+1][y].set;
+		oldSet = dungeon->maze[x][y].set;
+	}
+
+	for(int mergeX = 0; mergeX < dungeon->w; mergeX++)
+	{
+		if(oldSet == dungeon->maze[mergeX][y].set)
+		{
+			dungeon->maze[mergeX][y].set = newSet;
+		}
+	}
 }
 
 /**
