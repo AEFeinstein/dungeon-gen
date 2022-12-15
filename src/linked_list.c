@@ -74,7 +74,7 @@
 void push(list_t* list, void* val)
 {
     VALIDATE_LIST(__func__, __LINE__, true, list, val);
-    node_t* newLast = malloc(sizeof(node_t));
+    node_t* newLast = calloc(1, sizeof(node_t));
     newLast->val = val;
     newLast->next = NULL;
     newLast->prev = list->last;
@@ -165,7 +165,7 @@ void* peekLast(list_t* list)
 void unshift(list_t* list, void* val)
 {
     VALIDATE_LIST(__func__, __LINE__, true, list, val);
-    node_t* newFirst = malloc(sizeof(node_t));
+    node_t* newFirst = calloc(1, sizeof(node_t));
     newFirst->val = val;
     newFirst->next = list->first;
     newFirst->prev = NULL;
@@ -233,7 +233,7 @@ void add(list_t* list, void* val, int index)
     // Else if the index we're trying to add to is before the end of the list.
     else if (index < list->length - 1)
     {
-        node_t* newNode = malloc(sizeof(node_t));
+        node_t* newNode = calloc(1, sizeof(node_t));
         newNode->val = val;
         newNode->next = NULL;
         newNode->prev = NULL;

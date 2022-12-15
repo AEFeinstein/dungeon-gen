@@ -2,6 +2,8 @@
 // Includes
 //==============================================================================
 
+#include <inttypes.h>
+
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 #define STB_IMAGE_WRITE_IMPLEMENTATION
@@ -39,6 +41,19 @@ void mergeSets(dungeon_t * dungeon, int x, int y);
 #define COORDS_TO_LIST(x, y) ((void*)((intptr_t)(((x) << 16) | (y))))
 #define LIST_TO_X(c) ((((intptr_t)(c)) >> 16) & 0xFFFF)
 #define LIST_TO_Y(c) ((((intptr_t)(c)) >>  0) & 0xFFFF)
+
+//==============================================================================
+// Variables
+//==============================================================================
+
+// Convenience directions
+const coord_t cardinals[DOOR_MAX] =
+{
+    {.x =  0, .y = -1}, // DOOR_UP
+    {.x =  0, .y =  1}, // DOOR_DOWN
+    {.x = -1, .y =  0}, // DOOR_LEFT
+    {.x =  1, .y =  0}  // DOOR_RIGHT
+};
 
 //==============================================================================
 // Functions
@@ -297,7 +312,7 @@ void connectDungeonRecursive(dungeon_t * dungeon)
 {
     list_t roomStack = {0};
     coord_t cRoom = {.x = dungeon->w / 2, .y = dungeon->h - 1};
-    dungeon->maze[cRoom.x][cRoom.y].isStart = true;
+    dungeon->maze[cRoom.x][cRoom.y].type = DUNGEON_START;
 
     int roomsVisited = 0;
     int distFromStart = 0;
@@ -413,7 +428,7 @@ void connectDungeonRecursive(dungeon_t * dungeon)
         }
     }
 
-    dungeon->maze[furtherstRoom.x][furtherstRoom.y].isEnd = true;
+    dungeon->maze[furtherstRoom.x][furtherstRoom.y].type = DUNGEON_END;
 
     clear(&roomStack);
 }
@@ -439,29 +454,44 @@ void clearDungeonDists(dungeon_t * dungeon)
 /**
  * @brief TODO doc
  * 
- * @param maze 
+ * @param door 
+ * @return true 
+ * @return false 
+ */
+bool isLocked(door_t * door)
+{
+    switch(door->type)
+    {
+        case KEY_1:
+        case KEY_2:
+        {
+            return true;
+        }
+        default:
+        {
+            return false;
+        }
+    }
+}
+
+/**
+ * @brief TODO doc
+ * 
+ * @param dungeon 
  * @param startX 
  * @param startY 
+ * @param longestDist 
  * @return coord_t 
  */
-coord_t distFromRoom(dungeon_t * dungeon, uint16_t startX, uint16_t startY)
+coord_t distFromRoom(dungeon_t * dungeon, uint16_t startX, uint16_t startY, uint16_t * longestDist)
 {
-    // Convenience directions
-    const coord_t cardinals[DOOR_MAX] =
-    {
-        {.x =  0, .y = -1}, // DOOR_UP
-        {.x =  0, .y =  1}, // DOOR_DOWN
-        {.x = -1, .y =  0}, // DOOR_LEFT
-        {.x =  1, .y =  0}  // DOOR_RIGHT
-    };
-
     // Initialize a stack of unvisited rooms
     list_t unvisitedRooms = {0};
     push(&unvisitedRooms, COORDS_TO_LIST(startX, startY));
     dungeon->maze[startX][startY].dist = 0;
 
     // Keep track of the longest distance to the furthest room
-    uint16_t longestDist = 0;
+    *longestDist = 0;
     coord_t furthestRoom = {0};
 
     // For the entire maze
@@ -476,7 +506,7 @@ coord_t distFromRoom(dungeon_t * dungeon, uint16_t startX, uint16_t startY)
         for(doorIdx dir = 0; dir < DOOR_MAX; dir++)
         {
             // If this is a door
-            if(thisRoom->doors[dir] && thisRoom->doors[dir]->isDoor)
+            if(thisRoom->doors[dir] && thisRoom->doors[dir]->isDoor && !isLocked(thisRoom->doors[dir]))
             {
                 uint16_t nextX = cX + cardinals[dir].x;
                 uint16_t nextY = cY + cardinals[dir].y;
@@ -488,9 +518,9 @@ coord_t distFromRoom(dungeon_t * dungeon, uint16_t startX, uint16_t startY)
                     nextRoom->dist = thisRoom->dist + 1;
                     push(&unvisitedRooms, COORDS_TO_LIST(nextX, nextY));
 
-                    if(nextRoom->dist > longestDist)
+                    if(nextRoom->dist > *longestDist)
                     {
-                        longestDist = nextRoom->dist;
+                        *longestDist = nextRoom->dist;
                         furthestRoom.x = nextX;
                         furthestRoom.y = nextY;
                     }
@@ -500,9 +530,113 @@ coord_t distFromRoom(dungeon_t * dungeon, uint16_t startX, uint16_t startY)
     }
     clear(&unvisitedRooms);
 
-    printf("Longest dist %d\n", longestDist);
+    printf("Longest dist %d\n", *longestDist);
 
     return furthestRoom;
+}
+
+/**
+ * @brief TODO doc
+ * 
+ * @param dungeon 
+ * @param x0 
+ * @param y0 
+ * @param x1 
+ * @param y1 
+ * @param pathLen 
+ * @param type 
+ * @return true 
+ * @return false 
+ */
+bool markPath(dungeon_t * dungeon, int x0, int y0, int x1, int y1, int pathLen, roomType_t type)
+{
+    // Start at the end, walk backwards
+    int cX = x1;
+    int cY = y1;
+
+    // Place a locked door halfway on the path
+    int lockPos = pathLen / 2 + 1;
+    int pathIdx = 0;
+
+    // Keep walking until you get to the start
+    while(cX != x0 || cY != y0)
+    {
+        mazeCell_t * thisRoom = &dungeon->maze[cX][cY];
+
+        // If this happens, it's impossible to walk a path
+        if(thisRoom->dist < 0)
+        {
+            return false;
+        }
+
+        // Check all directions
+        for(doorIdx dir = 0; dir < DOOR_MAX; dir++)
+        {
+            // If this is a door
+            if(thisRoom->doors[dir] && thisRoom->doors[dir]->isDoor)
+            {
+                uint16_t nextX = cX + cardinals[dir].x;
+                uint16_t nextY = cY + cardinals[dir].y;
+                mazeCell_t * nextRoom = &(dungeon->maze[nextX][nextY]);
+                // If this room is closer to the start than we are now
+                if(nextRoom->dist < thisRoom->dist)
+                {
+                    // Increment the path length
+                    pathIdx++;
+                    // Check if a lock should be placed
+                    if(pathIdx == lockPos)
+                    {
+                        thisRoom->doors[dir]->type = type;
+                    }
+
+                    // Mark this room on the path
+                    nextRoom->isOnPath = true;
+                    cX = nextX;
+                    cY = nextY;
+                    break;
+                }
+            }
+        }
+    }
+    return true;
+}
+
+/**
+ * @brief TODO doc
+ * 
+ * @param type 
+ * @return uint32_t 
+ */
+uint32_t roomColor(roomType_t type)
+{
+    switch(type)
+    {
+        case EMPTY_ROOM:
+        {
+            return 0xFFFFFFFF;
+        }
+        case DUNGEON_START:
+        {
+            return 0xFFFF0000;
+        }
+        case DUNGEON_END:
+        {
+            return 0xFF0000FF;
+        }
+        case DEAD_END:
+        {
+            return 0xFF00FF00;
+        }
+        case KEY_1:
+        {
+            return 0xFFFF8040;
+        }
+        case KEY_2:
+        {
+            return 0xFF4080FF;
+        }
+    }
+    return 0x00000000;
 }
 
 /**
@@ -524,9 +658,9 @@ void saveDungeonPng(dungeon_t * dungeon)
             numDoors += (dungeon->maze[x][y].doors[DOOR_DOWN] && dungeon->maze[x][y].doors[DOOR_DOWN]->isDoor) ? 1 : 0;
             numDoors += (dungeon->maze[x][y].doors[DOOR_LEFT] && dungeon->maze[x][y].doors[DOOR_LEFT]->isDoor) ? 1 : 0;
             numDoors += (dungeon->maze[x][y].doors[DOOR_RIGHT] && dungeon->maze[x][y].doors[DOOR_RIGHT]->isDoor) ? 1 : 0;
-            if(1 == numDoors)
+            if(1 == numDoors && EMPTY_ROOM == dungeon->maze[x][y].type)
             {
-                dungeon->maze[x][y].isDeadEnd = true;
+                dungeon->maze[x][y].type = DEAD_END;
             }
 
             int roomIdx = ((y * ROOM_SIZE) * (dungeon->w * ROOM_SIZE)) + (x * ROOM_SIZE);
@@ -542,7 +676,7 @@ void saveDungeonPng(dungeon_t * dungeon)
                         {
                             if(0 == roomY && ROOM_SIZE/2 == roomX)
                             {
-                                data[pxIdx] = 0xFFFFFFFF;
+                                data[pxIdx] = roomColor(dungeon->maze[x][y].doors[DOOR_UP]->type);
                             }
                         }
 
@@ -550,7 +684,7 @@ void saveDungeonPng(dungeon_t * dungeon)
                         {
                             if(ROOM_SIZE-1 == roomY && ROOM_SIZE/2 == roomX)
                             {
-                                data[pxIdx] = 0xFFFFFFFF;
+                                data[pxIdx] = roomColor(dungeon->maze[x][y].doors[DOOR_DOWN]->type);
                             }
                         }
 
@@ -558,7 +692,7 @@ void saveDungeonPng(dungeon_t * dungeon)
                         {
                             if(0 == roomX && ROOM_SIZE/2 == roomY)
                             {
-                                data[pxIdx] = 0xFFFFFFFF;
+                                data[pxIdx] = roomColor(dungeon->maze[x][y].doors[DOOR_LEFT]->type);
                             }
                         }
 
@@ -566,28 +700,13 @@ void saveDungeonPng(dungeon_t * dungeon)
                         {
                             if(ROOM_SIZE-1 == roomX && ROOM_SIZE/2 == roomY)
                             {
-                                data[pxIdx] = 0xFFFFFFFF;
+                                data[pxIdx] = roomColor(dungeon->maze[x][y].doors[DOOR_RIGHT]->type);
                             }
                         }
                     }
                     else
                     {
-                        if(dungeon->maze[x][y].isStart)
-                        {
-                            data[pxIdx] = 0xFFFF0000;
-                        }
-                        else if(dungeon->maze[x][y].isEnd)
-                        {
-                            data[pxIdx] = 0xFF0000FF;
-                        }
-                        else if(dungeon->maze[x][y].isDeadEnd)
-                        {
-                            data[pxIdx] = 0xFF00FF00;
-                        }
-                        else
-                        {
-                            data[pxIdx] = 0xFFFFFFFF;
-                        }
+                        data[pxIdx] = roomColor(dungeon->maze[x][y].type);
                     }
                 }
             }
@@ -644,7 +763,7 @@ void printStack(list_t * stack)
     node_t * node = stack->first;
     while(node)
     {
-        printf("%ld, ", (intptr_t)node->val);
+        printf("%" PRIxPTR ", ", (intptr_t)node->val);
         node = node->next;
     }
     printf("\n");

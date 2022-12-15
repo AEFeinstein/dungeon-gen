@@ -25,7 +25,7 @@ typedef struct
 
 // Creating an empty list example.
 /*
-    list_t * myList = malloc(sizeof(list_t));
+    list_t * myList = calloc(1, sizeof(list_t));
     myList->first = NULL;
     myList->last = NULL;
     myList->length = 0;
