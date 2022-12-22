@@ -70,7 +70,7 @@ void saveDungeonPng(dungeon_t * dungeon);
 
 void clearDungeonDists(dungeon_t * dungeon);
 coord_t addDistFromRoom(dungeon_t * dungeon, uint16_t startX, uint16_t startY, bool ignoreLocks);
-int countRoomsAfterDoors(dungeon_t * dungeon, uint16_t startX, uint16_t startY);
+void countRoomsAfterDoors(dungeon_t * dungeon, uint16_t startX, uint16_t startY);
 void setPartitions(dungeon_t * dungeon, mazeCell_t * startingRoom, roomType_t partition);
 void markDeadEnds(dungeon_t * dungeon);
 void placeKeys(dungeon_t * dungeon, const roomType_t * keys, int numKeys);
