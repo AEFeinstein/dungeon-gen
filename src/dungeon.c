@@ -4,6 +4,7 @@
 
 #include <inttypes.h>
 
+#define STBI_ONLY_PNG
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 #define STB_IMAGE_WRITE_IMPLEMENTATION
@@ -29,10 +30,13 @@ typedef enum
 // Function prototypes
 //==============================================================================
 
+#ifdef DBG_PRINT
 void printRow(int y, int mazeW, mazeCell_t ** maze);
-void printStack(list_t * stack);
-void fisherYates(doorIdx * arr, int len);
+#endif
+
 void mergeSets(dungeon_t * dungeon, int x, int y);
+void fisherYates(int * arr, int len);
+uint32_t roomColor(roomType_t type);
 
 //==============================================================================
 // Defines
@@ -81,9 +85,19 @@ void initDungeon(dungeon_t * dungeon, int mazeW, int mazeH)
     }
 
     // Allocate doors
-    int numDoors = (mazeW * (mazeH - 1)) + ((mazeW - 1) * mazeH);
-    dungeon->doors = calloc(numDoors, sizeof(door_t));
+    dungeon->numDoors = (mazeW * (mazeH - 1)) + ((mazeW - 1) * mazeH);
+    dungeon->doors = calloc(dungeon->numDoors, sizeof(door_t));
     int doorIdx = 0;
+
+    // Number the rooms
+    for(int y = 0; y < mazeH; y++)
+    {
+        for(int x = 0; x < mazeW; x++)
+        {
+            dungeon->maze[x][y].x = x;
+            dungeon->maze[x][y].y = y;
+        }
+    }
 
     // Connect left/right doors
     for(int y = 0; y < mazeH; y++)
@@ -92,6 +106,10 @@ void initDungeon(dungeon_t * dungeon, int mazeW, int mazeH)
         {
             dungeon->maze[x    ][y].doors[DOOR_RIGHT] = &dungeon->doors[doorIdx];
             dungeon->maze[x + 1][y].doors[DOOR_LEFT] = &dungeon->doors[doorIdx];
+
+            dungeon->doors[doorIdx].rooms[0] = &dungeon->maze[x    ][y];
+            dungeon->doors[doorIdx].rooms[1] = &dungeon->maze[x + 1][y];
+
             doorIdx++;
         }
     }
@@ -103,6 +121,10 @@ void initDungeon(dungeon_t * dungeon, int mazeW, int mazeH)
         {
             dungeon->maze[x][y    ].doors[DOOR_DOWN] = &dungeon->doors[doorIdx];
             dungeon->maze[x][y + 1].doors[DOOR_UP] = &dungeon->doors[doorIdx];
+
+            dungeon->doors[doorIdx].rooms[0] = &dungeon->maze[x][y    ];
+            dungeon->doors[doorIdx].rooms[1] = &dungeon->maze[x][y + 1];
+
             doorIdx++;
         }
     }
@@ -306,157 +328,9 @@ void mergeSets(dungeon_t * dungeon, int x, int y)
 /**
  * @brief TODO doc
  * 
- * @param dungeon 
- */
-void connectDungeonRecursive(dungeon_t * dungeon)
-{
-    list_t roomStack = {0};
-    coord_t cRoom = {.x = dungeon->w / 2, .y = dungeon->h - 1};
-    dungeon->maze[cRoom.x][cRoom.y].type = DUNGEON_START;
-
-    int roomsVisited = 0;
-    int distFromStart = 0;
-    int furthestDist = 0;
-    coord_t furtherstRoom;
-    while(roomsVisited < dungeon->w * dungeon->h)
-    {
-        // Visit this room
-        push(&roomStack, (void*) (intptr_t)((cRoom.y * dungeon->w) + cRoom.x) );
-        printStack(&roomStack);
-        if(false == dungeon->maze[cRoom.x][cRoom.y].visited)
-        {
-            dungeon->maze[cRoom.x][cRoom.y].visited = true;
-            roomsVisited++;
-        }
-
-        // Find the next room
-        doorIdx choices[] = {DOOR_UP, DOOR_DOWN, DOOR_LEFT, DOOR_RIGHT};
-        fisherYates(choices, sizeof(choices) / sizeof(choices[0]));
-        bool roomMoved = false;
-        for(size_t i = 0; i < sizeof(choices) / sizeof(int); i++)
-        {
-            switch (choices[i])
-            {
-                case DOOR_UP:
-                {
-                    // Go up
-                    if(cRoom.y > 0)
-                    {
-                        if(!dungeon->maze[cRoom.x][cRoom.y - 1].visited)
-                        {
-                            dungeon->maze[cRoom.x][cRoom.y].doors[choices[i]]->isDoor = true;
-                            cRoom.y--;
-                            roomMoved = true;
-                        }
-                    }
-                    break;
-                }
-                case DOOR_DOWN:
-                {
-                    // Go down
-                    if(cRoom.y < dungeon->h - 1)
-                    {
-                        if(!dungeon->maze[cRoom.x][cRoom.y + 1].visited)
-                        {
-                            dungeon->maze[cRoom.x][cRoom.y].doors[choices[i]]->isDoor = true;
-                            cRoom.y++;
-                            roomMoved = true;
-                        }
-                    }
-                    break;
-                }
-                case DOOR_LEFT:
-                {
-                    // Go left
-                    if(cRoom.x > 0)
-                    {
-                        if(!dungeon->maze[cRoom.x - 1][cRoom.y].visited)
-                        {
-                            dungeon->maze[cRoom.x][cRoom.y].doors[choices[i]]->isDoor = true;
-                            cRoom.x--;
-                            roomMoved = true;
-                        }
-                    }
-                    break;
-                }
-                case DOOR_RIGHT:
-                {
-                    // Go right
-                    if(cRoom.x < dungeon->w - 1)
-                    {
-                        if(!dungeon->maze[cRoom.x + 1][cRoom.y].visited)
-                        {
-                            dungeon->maze[cRoom.x][cRoom.y].doors[choices[i]]->isDoor = true;
-                            cRoom.x++;
-                            roomMoved = true;
-                        }
-                    }
-                    break;
-                }
-                case DOOR_MAX:
-                {
-                    break;
-                }
-            }
-
-            if(roomMoved)
-            {
-                // New room was found, so stop looping
-                distFromStart++;
-
-                if(distFromStart > furthestDist)
-                {
-                    furthestDist = distFromStart;
-                    furtherstRoom = cRoom;
-                }
-                break;
-            }
-        }
-
-        if(!roomMoved)
-        {
-            distFromStart--;
-            // No valid rooms to move to, recursively do stuff
-            // Pop this room
-            pop(&roomStack);
-            // Pop the previous room to move to it
-            intptr_t roomIdx = (intptr_t)pop(&roomStack);
-            printStack(&roomStack);
-            // (intptr_t)peekLast(&roomStack);
-            cRoom.x = roomIdx % dungeon->w;
-            cRoom.y = roomIdx / dungeon->w;
-        }
-    }
-
-    dungeon->maze[furtherstRoom.x][furtherstRoom.y].type = DUNGEON_END;
-
-    clear(&roomStack);
-}
-
-/**
- * @brief TODO doc
- * 
- * @param maze 
- * @param width 
- * @param height 
- */
-void clearDungeonDists(dungeon_t * dungeon)
-{
-    for(int x = 0; x < dungeon->w; x++)
-    {
-        for(int y = 0; y < dungeon->h; y++)
-        {
-            dungeon->maze[x][y].dist = -1;
-        }        
-    }
-}
-
-/**
- * @brief TODO doc
- * 
- * @param door 
- * @return true 
- * @return false 
+ * @param door
+ * @return true
+ * @return false
  */
 bool isLocked(door_t * door)
 {
@@ -464,6 +338,11 @@ bool isLocked(door_t * door)
     {
         case KEY_1:
         case KEY_2:
+        case KEY_3:
+        case KEY_4:
+        case KEY_5:
+        case KEY_6:
+        case KEY_7:
         {
             return true;
         }
@@ -477,21 +356,47 @@ bool isLocked(door_t * door)
 /**
  * @brief TODO doc
  * 
- * @param dungeon 
- * @param startX 
- * @param startY 
- * @param longestDist 
- * @return coord_t 
+ * @param dungeon
  */
-coord_t distFromRoom(dungeon_t * dungeon, uint16_t startX, uint16_t startY, uint16_t * longestDist)
+void clearDungeonDists(dungeon_t * dungeon)
 {
+    for(int x = 0; x < dungeon->w; x++)
+    {
+        for(int y = 0; y < dungeon->h; y++)
+        {
+            dungeon->maze[x][y].dist = 0;
+        }        
+    }
+}
+
+/**
+ * @brief TODO doc
+ * 
+ * @param dungeon
+ * @param startX
+ * @param startY
+ * @param ignoreLocks
+ * @return coord_t
+ */
+coord_t addDistFromRoom(dungeon_t * dungeon, uint16_t startX, uint16_t startY, bool ignoreLocks)
+{
+    // Mark all cells as not visited
+    for(int x = 0; x < dungeon->w; x++)
+    {
+        for(int y = 0; y < dungeon->h; y++)
+        {
+            dungeon->maze[x][y].visited = false;
+        }
+    }
+    // Except for the starting room
+    dungeon->maze[startX][startY].visited = true;
+
     // Initialize a stack of unvisited rooms
     list_t unvisitedRooms = {0};
     push(&unvisitedRooms, COORDS_TO_LIST(startX, startY));
-    dungeon->maze[startX][startY].dist = 0;
 
     // Keep track of the longest distance to the furthest room
-    *longestDist = 0;
+    int16_t longestDist = 0;
     coord_t furthestRoom = {0};
 
     // For the entire maze
@@ -503,24 +408,25 @@ coord_t distFromRoom(dungeon_t * dungeon, uint16_t startX, uint16_t startY, uint
         mazeCell_t * thisRoom = &(dungeon->maze[cX][cY]);
 
         // Check all directions
-        for(doorIdx dir = 0; dir < DOOR_MAX; dir++)
+        for(doorIdx dir = 0; dir < DOOR_MAX; ++dir)
         {
-            // If this is a door
-            if(thisRoom->doors[dir] && thisRoom->doors[dir]->isDoor && !isLocked(thisRoom->doors[dir]))
+            // If this is an unlocked door
+            if(thisRoom->doors[dir] && thisRoom->doors[dir]->isDoor && (ignoreLocks || !isLocked(thisRoom->doors[dir])))
             {
                 uint16_t nextX = cX + cardinals[dir].x;
                 uint16_t nextY = cY + cardinals[dir].y;
                 mazeCell_t * nextRoom = &(dungeon->maze[nextX][nextY]);
                 // If this room hasn't been visited yet
-                if(nextRoom->dist < 0)
+                if(false == nextRoom->visited)
                 {
-                    // Assign a distance, push it on the stack
-                    nextRoom->dist = thisRoom->dist + 1;
+                    // Increment the distance, push it on the stack
+                    nextRoom->dist += (thisRoom->dist + 1);
+                    nextRoom->visited = true;
                     push(&unvisitedRooms, COORDS_TO_LIST(nextX, nextY));
 
-                    if(nextRoom->dist > *longestDist)
+                    if(nextRoom->dist > longestDist)
                     {
-                        *longestDist = nextRoom->dist;
+                        longestDist = nextRoom->dist;
                         furthestRoom.x = nextX;
                         furthestRoom.y = nextY;
                     }
@@ -530,125 +436,199 @@ coord_t distFromRoom(dungeon_t * dungeon, uint16_t startX, uint16_t startY, uint
     }
     clear(&unvisitedRooms);
 
-    printf("Longest dist %d\n", *longestDist);
-
     return furthestRoom;
 }
 
 /**
  * @brief TODO doc
+ * TODO eliminate recursion
  * 
  * @param dungeon 
- * @param x0 
- * @param y0 
- * @param x1 
- * @param y1 
- * @param pathLen 
- * @param type 
- * @return true 
- * @return false 
+ * @param startX
+ * @param startY
+ * @param isInit
+ * @return int
  */
-bool markPath(dungeon_t * dungeon, int x0, int y0, int x1, int y1, int pathLen, roomType_t type)
+int countRoomsAfterDoors(dungeon_t * dungeon, uint16_t startX, uint16_t startY, bool isInit)
 {
-    // Start at the end, walk backwards
-    int cX = x1;
-    int cY = y1;
-
-    // Place a locked door halfway on the path
-    int lockPos = pathLen / 2 + 1;
-    int pathIdx = 0;
-
-    // Keep walking until you get to the start
-    while(cX != x0 || cY != y0)
+    if(isInit)
     {
-        mazeCell_t * thisRoom = &dungeon->maze[cX][cY];
-
-        // If this happens, it's impossible to walk a path
-        if(thisRoom->dist < 0)
+        // Mark all cells as not visited
+        for(int x = 0; x < dungeon->w; x++)
         {
-            return false;
+            for(int y = 0; y < dungeon->h; y++)
+            {
+                dungeon->maze[x][y].visited = false;
+                dungeon->maze[x][y].numChildren = 0;
+            }
         }
+        for(int d = 0; d < dungeon->numDoors; d++)
+        {
+            dungeon->doors[d].numChildren = 0;
+        }
+    }
+
+    mazeCell_t * thisRoom = &(dungeon->maze[startX][startY]);
+    thisRoom->visited = true;
+    // Check all directions
+    for(doorIdx dir = 0; dir < DOOR_MAX; ++dir)
+    {
+        // If this is an unlocked door
+        if(thisRoom->doors[dir] && thisRoom->doors[dir]->isDoor && !isLocked(thisRoom->doors[dir]))
+        {
+            uint16_t nextX = startX + cardinals[dir].x;
+            uint16_t nextY = startY + cardinals[dir].y;
+            mazeCell_t * nextRoom = &(dungeon->maze[nextX][nextY]);
+            // If this room hasn't been visited yet
+            if(false == nextRoom->visited)
+            {
+                // Increment children count
+                int nextRoomChildren = countRoomsAfterDoors(dungeon, nextX, nextY, false);
+                thisRoom->doors[dir]->numChildren += (1 + nextRoomChildren);
+                thisRoom->numChildren += (1 + nextRoomChildren);
+            }
+        }
+    }
+    return thisRoom->numChildren;
+}
+
+/**
+ * @brief TODO doc
+ *
+ * @param dungeon
+ * @param startingRoom
+ * @param partition
+ */
+void setPartitions(dungeon_t * dungeon, mazeCell_t * startingRoom, roomType_t partition)
+{
+    // Mark all cells as not visited
+    for(int x = 0; x < dungeon->w; x++)
+    {
+        for(int y = 0; y < dungeon->h; y++)
+        {
+            dungeon->maze[x][y].visited = false;
+        }
+    }
+
+    list_t roomStack = {0};
+    push(&roomStack, startingRoom);
+
+    while(0 != roomStack.length)
+    {
+        mazeCell_t * thisRoom = pop(&roomStack);
+
+        // Mark this room's partition
+        thisRoom->partition = partition;
+        thisRoom->visited = true;
 
         // Check all directions
         for(doorIdx dir = 0; dir < DOOR_MAX; dir++)
         {
-            // If this is a door
-            if(thisRoom->doors[dir] && thisRoom->doors[dir]->isDoor)
+            door_t * door = thisRoom->doors[dir];
+            // If this is an unlocked door
+            if( door && door->isDoor && !isLocked(door))
             {
-                uint16_t nextX = cX + cardinals[dir].x;
-                uint16_t nextY = cY + cardinals[dir].y;
-                mazeCell_t * nextRoom = &(dungeon->maze[nextX][nextY]);
-                // If this room is closer to the start than we are now
-                if(nextRoom->dist < thisRoom->dist)
+                // Get the next room through the door
+                mazeCell_t * nextRoom = door->rooms[0] == thisRoom ? door->rooms[1] : door->rooms[0];
+                // If the next room hasn't been visited yet, push it onto the stack
+                if(!nextRoom->visited)
                 {
-                    // Increment the path length
-                    pathIdx++;
-                    // Check if a lock should be placed
-                    if(pathIdx == lockPos)
-                    {
-                        thisRoom->doors[dir]->type = type;
-                    }
+                    push(&roomStack, nextRoom);
+                }
+            }
+        }
+    }
+}
 
-                    // Mark this room on the path
-                    nextRoom->isOnPath = true;
-                    cX = nextX;
-                    cY = nextY;
+/**
+ * @brief
+ * 
+ * @param dungeon
+ * @param keys
+ * @param numKeys
+ */
+void placeKeys(dungeon_t * dungeon, const roomType_t * keys, int numKeys)
+{
+    int allRooms[dungeon->w * dungeon->h];
+    for(int i = 0; i < dungeon->w * dungeon->h; i++)
+    {
+        allRooms[i] = i;
+    }
+    fisherYates(allRooms, dungeon->w * dungeon->h);
+
+    bool keysPlaced[numKeys];
+    memset(keysPlaced, 0, sizeof(keysPlaced));
+
+    // Place keys in dead-ends
+    for(int i = 0; i < dungeon->w * dungeon->h; i++)
+    {
+        int x = allRooms[i] % dungeon->w;
+        int y = allRooms[i] / dungeon->w;
+
+        for(int kIdx = numKeys - 1; kIdx >= 0; kIdx--)
+        {
+            if(false == keysPlaced[kIdx])
+            {
+                if((DEAD_END == dungeon->maze[x][y].type) && dungeon->maze[x][y].partition == (keys[kIdx] - 1))
+                {
+                    dungeon->maze[x][y].type = keys[kIdx];
+                    keysPlaced[kIdx] = true;
                     break;
                 }
             }
         }
     }
-    return true;
-}
 
-/**
- * @brief TODO doc
- * 
- * @param type 
- * @return uint32_t 
- */
-uint32_t roomColor(roomType_t type)
-{
-    switch(type)
+    // Place keys in non-dead-ends
+    for(int i = 0; i < dungeon->w * dungeon->h; i++)
     {
-        case EMPTY_ROOM:
+        int x = allRooms[i] % dungeon->w;
+        int y = allRooms[i] / dungeon->w;
+
+        for(int kIdx = numKeys - 1; kIdx >= 0; kIdx--)
         {
-            return 0xFFFFFFFF;
-        }
-        case DUNGEON_START:
-        {
-            return 0xFFFF0000;
-        }
-        case DUNGEON_END:
-        {
-            return 0xFF0000FF;
-        }
-        case DEAD_END:
-        {
-            return 0xFF00FF00;
-        }
-        case KEY_1:
-        {
-            return 0xFFFF8040;
-        }
-        case KEY_2:
-        {
-            return 0xFF4080FF;
+            if(false == keysPlaced[kIdx])
+            {
+                if(dungeon->maze[x][y].partition < keys[kIdx])
+                {
+                    dungeon->maze[x][y].type = keys[kIdx];
+                    keysPlaced[kIdx] = true;
+                    break;
+                }
+            }
         }
     }
-    return 0x00000000;
 }
 
 /**
  * @brief TODO doc
  * 
- * @param dungeon 
+ * @param arr
+ * @param len
  */
-void saveDungeonPng(dungeon_t * dungeon)
+void fisherYates(int * arr, int len)
 {
-    #define ROOM_SIZE 5
-    uint32_t * data = calloc(dungeon->w * dungeon->h * ROOM_SIZE * ROOM_SIZE, sizeof(uint32_t));
+    // Start from the last element and swap one by one. We don't
+    // need to run for the first element that's why i > 0
+    for (int i = len-1; i > 0; i--)
+    {
+        // Pick a random index from 0 to i
+        int j = rand() % (i+1);
 
+        // Swap arr[i] with the element at random index
+        int tmp = arr[i];
+        arr[i] = arr[j];
+        arr[j] = tmp;
+    }
+}
+
+/**
+ * @brief TODO doc
+ *
+ * @param dungeon
+ */
+void markDeadEnds(dungeon_t * dungeon)
+{
     for(int y = 0; y < dungeon->h; y++)
     {
         for(int x = 0; x < dungeon->w; x++)
@@ -662,7 +642,24 @@ void saveDungeonPng(dungeon_t * dungeon)
             {
                 dungeon->maze[x][y].type = DEAD_END;
             }
+        }
+    }
+}
 
+/**
+ * @brief TODO doc
+ *
+ * @param dungeon
+ */
+void saveDungeonPng(dungeon_t * dungeon)
+{
+    #define ROOM_SIZE 5
+    uint32_t * data = calloc(dungeon->w * dungeon->h * ROOM_SIZE * ROOM_SIZE, sizeof(uint32_t));
+
+    for(int y = 0; y < dungeon->h; y++)
+    {
+        for(int x = 0; x < dungeon->w; x++)
+        {
             int roomIdx = ((y * ROOM_SIZE) * (dungeon->w * ROOM_SIZE)) + (x * ROOM_SIZE);
             for(int roomY = 0; roomY < ROOM_SIZE; roomY++)
             {
@@ -706,7 +703,14 @@ void saveDungeonPng(dungeon_t * dungeon)
                     }
                     else
                     {
-                        data[pxIdx] = roomColor(dungeon->maze[x][y].type);
+                        data[pxIdx] = roomColor(dungeon->maze[x][y].partition);
+                        if(EMPTY_ROOM != dungeon->maze[x][y].type)
+                        {
+                            if((roomX == ROOM_SIZE / 2) && (roomY == ROOM_SIZE / 2))
+                            {
+                                data[pxIdx] = roomColor(dungeon->maze[x][y].type);
+                            }
+                        }
                     }
                 }
             }
@@ -717,6 +721,65 @@ void saveDungeonPng(dungeon_t * dungeon)
     free(data);
 }
 
+/**
+ * @brief TODO doc
+ *
+ * @param type
+ * @return uint32_t
+ */
+uint32_t roomColor(roomType_t type)
+{
+    switch(type)
+    {
+        case EMPTY_ROOM:
+        {
+            return 0xFFFFFFFF;
+        }
+        case DUNGEON_START:
+        {
+            return 0xFFFF0000;
+        }
+        case DUNGEON_END:
+        {
+            return 0xFF0000FF;
+        }
+        case DEAD_END:
+        {
+            return 0xFF000000;
+        }
+        case KEY_1:
+        {
+            return 0xFF7766EE;
+        }
+        case KEY_2:
+        {
+            return 0xFF338822;
+        }
+        case KEY_3:
+        {
+            return 0xFFAA7744;
+        }
+        case KEY_4:
+        {
+            return 0xFF44BBCC;
+        }
+        case KEY_5:
+        {
+            return 0xFFEECC66;
+        }
+        case KEY_6:
+        {
+            return 0xFF7733AA;
+        }
+        case KEY_7:
+        {
+            return 0xFFBBBBBB;
+        }
+    }
+    return 0x00000000;
+}
+
+#ifdef DBG_PRINT
 /**
  * @brief TODO doc
  * 
@@ -752,41 +815,4 @@ void printRow(int y, int mazeW, mazeCell_t ** maze)
     }
     printf("\n");
 }
-
-/**
- * @brief TODO doc
- * 
- * @param stack 
- */
-void printStack(list_t * stack)
-{
-    node_t * node = stack->first;
-    while(node)
-    {
-        printf("%" PRIxPTR ", ", (intptr_t)node->val);
-        node = node->next;
-    }
-    printf("\n");
-}
-
-/**
- * @brief TODO doc
- * 
- * @param arr 
- * @param len 
- */
-void fisherYates(doorIdx * arr, int len)
-{
-    // Start from the last element and swap one by one. We don't
-    // need to run for the first element that's why i > 0
-    for (int i = len-1; i > 0; i--)
-    {
-        // Pick a random index from 0 to i
-        int j = rand() % (i+1);
-
-        // Swap arr[i] with the element at random index
-        int tmp = arr[i];
-        arr[i] = arr[j];
-        arr[j] = tmp;
-    }
-}
+#endif

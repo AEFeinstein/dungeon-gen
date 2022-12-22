@@ -12,63 +12,67 @@
 
 #include "linked_list.h"
 
-/* Uncomment just one of these */
-// #define VALIDATE_LIST(func, line, nl, list, target) validateList(func, line, nl, list, target)
-#define VALIDATE_LIST(func, line, nl, list, target)
+#ifdef RUN_LINKED_LIST_TESTS
+    #define VALIDATE_LIST(func, line, nl, list, target) validateList(func, line, nl, list, target)
+#else
+    #define VALIDATE_LIST(func, line, nl, list, target)
+#endif
 
-// void validateList(const char * func, int line, bool nl, list_t * list, node_t * target);
+void validateList(const char * func, int line, bool nl, list_t * list, const node_t * target);
 
-// /**
-//  * @brief Debug print and validate the list
-//  * 
-//  * @param func The calling function
-//  * @param line The calling line
-//  * @param nl true to print a newline before the list, false to not
-//  * @param list The list to validate
-//  * @param target The target for the operation, may be NULL
-//  */
-// void validateList(const char * func, int line, bool nl, list_t * list, node_t * target)
-// {
-//     if(nl)
-//     {
-//         printf("\n");
-//     }
-//     ESP_LOGD("VL", "%s::%d, len: %d (%p)", func, line, list->length, target);
-//     node_t* currentNode = list->first;
-//     node_t* prev = NULL;
-//     int countedLen = 0;
+#ifdef RUN_LINKED_LIST_TESTS
+/**
+ * @brief Debug print and validate the list
+ *
+ * @param func The calling function
+ * @param line The calling line
+ * @param nl true to print a newline before the list, false to not
+ * @param list The list to validate
+ * @param target The target for the operation, may be NULL
+ */
+void validateList(const char * func, int line, bool nl, list_t * list, const node_t * target)
+{
+    if(nl)
+    {
+        printf("\n");
+    }
+    printf("%s::%d, len: %d (%p)", func, line, list->length, target);
+    node_t* currentNode = list->first;
+    node_t* prev = NULL;
+    int countedLen = 0;
 
-//     if(NULL != list->first && NULL != list->first->prev)
-//     {
-//         ESP_LOGE("VL", "Node before first not NULL");
-//         exit(1);
-//     }
+    if(NULL != list->first && NULL != list->first->prev)
+    {
+        fprintf(stderr, "Node before first not NULL");
+        exit(1);
+    }
 
-//     if(NULL != list->last && NULL != list->last->next)
-//     {
-//         ESP_LOGE("VL", "Node after last not NULL");
-//         exit(1);
-//     }
+    if(NULL != list->last && NULL != list->last->next)
+    {
+        fprintf(stderr, "Node after last not NULL");
+        exit(1);
+    }
 
-//     while (currentNode != NULL)
-//     {
-//         ESP_LOGD("VL", "%p -> %p -> %p", currentNode->prev, currentNode, currentNode->next);
-//         if(prev != currentNode->prev)
-//         {
-//             ESP_LOGE("VL", "Linkage error %p != %p", currentNode->prev, prev);
-//             exit(1);
-//         }
-//         prev = currentNode;
-//         currentNode = currentNode->next;
-//         countedLen++;
-//     }
+    while (currentNode != NULL)
+    {
+        printf("%p -> %p -> %p", currentNode->prev, currentNode, currentNode->next);
+        if(prev != currentNode->prev)
+        {
+            fprintf(stderr, "Linkage error %p != %p", currentNode->prev, prev);
+            exit(1);
+        }
+        prev = currentNode;
+        currentNode = currentNode->next;
+        countedLen++;
+    }
 
-//     if(countedLen != list->length)
-//     {
-//         ESP_LOGE("VL", "List mismatch, list says %d, counted %d", list->length, countedLen);
-//         exit(1);
-//     }
-// }
+    if(countedLen != list->length)
+    {
+        fprintf(stderr, "List mismatch, list says %d, counted %d", list->length, countedLen);
+        exit(1);
+    }
+}
+#endif
 
 // Add to the end of the list.
 void push(list_t* list, void* val)
@@ -238,10 +242,10 @@ void add(list_t* list, void* val, int index)
         newNode->next = NULL;
         newNode->prev = NULL;
 
-        node_t* current = NULL;
-        for (int i = 0; i < index; i++)
+        node_t* current = list->first;
+        while(index--)
         {
-            current = current == NULL ? list->first : current->next;
+            current = current->next;
         }
 
         // We need to adjust the newNode, and the nodes before and after it.
@@ -279,28 +283,38 @@ void* removeIdx(list_t* list, int index)
         VALIDATE_LIST(__func__, __LINE__, false, list, (void*)((intptr_t)index));
         return shift(list);
     }
+    // Can't remove indices that are after the list
+    else if (index > (list->length - 1))
+    {
+        VALIDATE_LIST(__func__, __LINE__, false, list, (void*)((intptr_t)index));
+        return NULL;
+    }
     // Else if the index we're trying to remove from is before the end of the list.
     else if (index < list->length - 1)
     {
         void* retval = NULL;
 
-        node_t* current = NULL;
-        for (int i = 0; i < index; i++)
+        node_t* current = list->first;
+        while(index--)
         {
-            current = current == NULL ? list->first : current->next;
+            current = current->next;
         }
 
         // We need to free the removed node, and adjust the nodes before and after it.
         // current is set to the node before it.
 
-        node_t* target = current->next;
-        retval = target->val;
+        retval = current->val;
 
-        current->next = target->next;
-        current->next->prev = current;
+        if(current->prev)
+        {
+            current->prev->next = current->next;
+        }
+        if(current->next)
+        {
+            current->next->prev = current->prev;
+        }
 
-        free(target);
-        target = NULL;
+        free(current);
 
         list->length--;
         VALIDATE_LIST(__func__, __LINE__, false, list, (void*)((intptr_t)index));
@@ -323,7 +337,7 @@ void* removeIdx(list_t* list, int index)
  * @param entry The entry to remove
  * @return The void* val associated with the removed entry
  */
-void* removeEntry(list_t* list, node_t* entry)
+void* removeEntry(list_t* list, const node_t* entry)
 {
     VALIDATE_LIST(__func__, __LINE__, true, list, entry);
     // If the list is null or empty, dont touch it
@@ -348,8 +362,7 @@ void* removeEntry(list_t* list, node_t* entry)
     else
     {
         // Start at list->first->next because we know the entry isn't at the head
-        node_t* prev = list->first;
-        node_t* curr = prev->next;
+        node_t* curr = list->first->next;
         // Iterate!
         while (curr != NULL)
         {
@@ -360,9 +373,15 @@ void* removeEntry(list_t* list, node_t* entry)
                 // current is set to the node before it.
 
                 // Link the previous node to the next node
-                prev->next = curr->next;
+                if(curr->prev)
+                {
+                    curr->prev->next = curr->next;
+                }
                 // Link the next node to the previous node
-                curr->next->prev = prev;
+                if(curr->next)
+                {
+                    curr->next->prev = curr->prev;
+                }
 
                 // Save a value to return
                 void* retval = curr->val;
@@ -378,7 +397,6 @@ void* removeEntry(list_t* list, node_t* entry)
 
             // Iterate to the next node
             curr = curr->next;
-            prev = curr->prev;
         }
     }
     // Nothing to be removed
@@ -397,97 +415,99 @@ void clear(list_t* list)
     VALIDATE_LIST(__func__, __LINE__, false, list, NULL);
 }
 
-// /**
-//  * @brief Exercise the linked list code by doing lots of random operations
-//  */
-// void listTester(void)
-// {
-//     list_t testList = 
-//     {
-//         .first = NULL,
-//         .last = NULL,
-//         .length = 0
-//     };
-//     list_t * l = &testList;
+#ifdef RUN_LINKED_LIST_TESTS
+/**
+ * @brief Exercise the linked list code by doing lots of random operations
+ */
+void listTester(void)
+{
+    list_t testList =
+    {
+        .first = NULL,
+        .last = NULL,
+        .length = 0
+    };
+    list_t * l = &testList;
 
-//     // Seed the list
-//     for(int i = 0; i < 25; i++)
-//     {
-//         push(l, NULL);
-//     }    
+    // Seed the list
+    for(int i = 0; i < 25; i++)
+    {
+        push(l, NULL);
+    }
 
-//     for(int64_t i = 0; i < 100000000; i++)
-//     {
-//         if(0 == i % 10000)
-//         {
-//             printf("link tester %" PRIu64 "\n", i);
-//         }
-//         switch(esp_random() % 8)
-//         {
-//             case 0:
-//             {
-//                 push(l, NULL);
-//                 break;
-//             }
-//             case 1:
-//             {
-//                 pop(l);
-//                 break;
-//             }
-//             case 2:
-//             {
-//                 unshift(l, NULL);
-//                 break;
-//             }
-//             case 3:
-//             {
-//                 shift(l);
-//                 break;
-//             }
-//             case 4:
-//             {
-//                 // Add to random valid index
-//                 int idx = 0;
-//                 if(l->length)
-//                 {
-//                     idx = esp_random() % l->length;
-//                 }
-//                 add(l, NULL, idx);
-//                 break;
-//             }
-//             case 5:
-//             {
-//                 // Remove from random valid index
-//                 int idx = 0;
-//                 if(l->length)
-//                 {
-//                     idx = esp_random() % l->length;
-//                 }
-//                 removeIdx(l, idx);
-//                 break;
-//             }
-//             case 6:
-//             {
-//                 // Remove random valid node
-//                 int idx = 0;
-//                 if(l->length)
-//                 {
-//                     idx = esp_random() % l->length;
-//                 }
-//                 node_t * node = l->first;
-//                 while(idx--)
-//                 {
-//                     node = node->next;
-//                 }
-//                 removeEntry(l, node);
-//                 break;
-//             }
-//             case 7:
-//             {
-//                 // clear(l);
-//                 break;
-//             }
-//         }
-//     }
-//     ESP_LOGD("LV", "List validated");
-// }
+    for(int64_t i = 0; i < 100000000; i++)
+    {
+        if(0 == i % 10000)
+        {
+            printf("link tester %" PRIu64 "\n", i);
+        }
+        switch(rand() % 8)
+        {
+            case 0:
+            {
+                push(l, NULL);
+                break;
+            }
+            case 1:
+            {
+                pop(l);
+                break;
+            }
+            case 2:
+            {
+                unshift(l, NULL);
+                break;
+            }
+            case 3:
+            {
+                shift(l);
+                break;
+            }
+            case 4:
+            {
+                // Add to random valid index
+                int idx = 0;
+                if(l->length)
+                {
+                    idx = rand() % l->length;
+                }
+                add(l, NULL, idx);
+                break;
+            }
+            case 5:
+            {
+                // Remove from random valid index
+                int idx = 0;
+                if(l->length)
+                {
+                    idx = rand() % l->length;
+                }
+                removeIdx(l, idx);
+                break;
+            }
+            case 6:
+            {
+                // Remove random valid node
+                int idx = 0;
+                if(l->length)
+                {
+                    idx = rand() % l->length;
+                }
+                node_t * node = l->first;
+                while(idx--)
+                {
+                    node = node->next;
+                }
+                removeEntry(l, node);
+                break;
+            }
+            case 7:
+            {
+                // clear(l);
+                break;
+            }
+        }
+    }
+    printf("List validated");
+}
+#endif

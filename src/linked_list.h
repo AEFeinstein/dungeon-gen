@@ -60,19 +60,24 @@ void add(list_t* list, void* val, int index);
 void* removeIdx(list_t* list, int index);
 
 // Remove a given entry from the list.
-void* removeEntry(list_t* list, node_t* entry);
+void* removeEntry(list_t* list, const node_t* entry);
 
 // Remove all items from the list.
 // NOTE: This frees nodes but does not free anything pointed to by the vals of nodes.
 void clear(list_t* list);
 
-// Exercise the linked list functions
-// void listTester(void);
+// Uncomment this to run tests
+// #define RUN_LINKED_LIST_TESTS
 
-// TODO
+// Peek at the first entry in the list
 void* peekLast(list_t* list);
 
-// TODO
+// Peek at the last entry in the list
 void* peekFirst(list_t* list);
+
+#ifdef RUN_LINKED_LIST_TESTS
+// Exercise the linked list functions
+void listTester(void);
+#endif
 
 #endif
