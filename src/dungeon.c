@@ -441,55 +441,92 @@ coord_t addDistFromRoom(dungeon_t * dungeon, uint16_t startX, uint16_t startY, b
 
 /**
  * @brief TODO doc
- * TODO eliminate recursion
  * 
  * @param dungeon 
  * @param startX
  * @param startY
- * @param isInit
  * @return int
  */
-int countRoomsAfterDoors(dungeon_t * dungeon, uint16_t startX, uint16_t startY, bool isInit)
+void countRoomsAfterDoors(dungeon_t * dungeon, uint16_t startX, uint16_t startY)
 {
-    if(isInit)
+    // Mark all cells as not visited
+    for(int x = 0; x < dungeon->w; x++)
     {
-        // Mark all cells as not visited
-        for(int x = 0; x < dungeon->w; x++)
+        for(int y = 0; y < dungeon->h; y++)
         {
-            for(int y = 0; y < dungeon->h; y++)
-            {
-                dungeon->maze[x][y].visited = false;
-                dungeon->maze[x][y].numChildren = 0;
-            }
+            dungeon->maze[x][y].visited = false;
+            dungeon->maze[x][y].numChildren = 0;
         }
-        for(int d = 0; d < dungeon->numDoors; d++)
+    }
+    for(int d = 0; d < dungeon->numDoors; d++)
+    {
+        dungeon->doors[d].numChildren = 0;
+    }
+
+    // Build a list of rooms to visit, reverse-depth-first order 
+    list_t rDepthFirstOrder = {0};
+    list_t roomStack = {0};
+    push(&roomStack, &(dungeon->maze[startX][startY]));
+    while(0 != roomStack.length)
+    {
+        mazeCell_t * thisRoom = pop(&roomStack);
+        push(&rDepthFirstOrder, thisRoom);
+
+        // Mark this room as visited
+        thisRoom->visited = true;
+
+        // Check all directions
+        for(doorIdx dir = 0; dir < DOOR_MAX; dir++)
         {
-            dungeon->doors[d].numChildren = 0;
+            door_t * door = thisRoom->doors[dir];
+            // If this is an unlocked door
+            if( door && door->isDoor && !isLocked(door))
+            {
+                // Get the next room through the door
+                mazeCell_t * nextRoom = door->rooms[0] == thisRoom ? door->rooms[1] : door->rooms[0];
+                // If the next room hasn't been visited yet, push it onto the stack
+                if(!nextRoom->visited)
+                {
+                    push(&roomStack, nextRoom);
+                }
+            }
         }
     }
 
-    mazeCell_t * thisRoom = &(dungeon->maze[startX][startY]);
-    thisRoom->visited = true;
-    // Check all directions
-    for(doorIdx dir = 0; dir < DOOR_MAX; ++dir)
+    // Mark all cells as not visited, again
+    for(int x = 0; x < dungeon->w; x++)
     {
-        // If this is an unlocked door
-        if(thisRoom->doors[dir] && thisRoom->doors[dir]->isDoor && !isLocked(thisRoom->doors[dir]))
+        for(int y = 0; y < dungeon->h; y++)
         {
-            uint16_t nextX = startX + cardinals[dir].x;
-            uint16_t nextY = startY + cardinals[dir].y;
-            mazeCell_t * nextRoom = &(dungeon->maze[nextX][nextY]);
-            // If this room hasn't been visited yet
-            if(false == nextRoom->visited)
+            dungeon->maze[x][y].visited = false;
+        }
+    }
+    
+    // Visit all rooms, reverse depth first order
+    while(rDepthFirstOrder.length > 0)
+    {
+        mazeCell_t * thisRoom = pop(&rDepthFirstOrder);
+        thisRoom->visited = true;
+
+        // Check all directions
+        for(doorIdx dir = 0; dir < DOOR_MAX; dir++)
+        {
+            door_t * door = thisRoom->doors[dir];
+            // If this is an unlocked door
+            if( door && door->isDoor && !isLocked(door))
             {
-                // Increment children count
-                int nextRoomChildren = countRoomsAfterDoors(dungeon, nextX, nextY, false);
-                thisRoom->doors[dir]->numChildren += (1 + nextRoomChildren);
-                thisRoom->numChildren += (1 + nextRoomChildren);
+                // Get the other room
+                mazeCell_t * nextRoom = door->rooms[0] == thisRoom ? door->rooms[1] : door->rooms[0];
+                // If it's been visited already (i.e. working backwards)
+                if(nextRoom->visited)
+                {
+                    // Add up the number of children
+                    door->numChildren += (1 + nextRoom->numChildren);
+                    thisRoom->numChildren += (1 + nextRoom->numChildren);
+                }
             }
         }
     }
-    return thisRoom->numChildren;
 }
 
 /**

@@ -59,7 +59,7 @@ int main(void)
     for(uint8_t i = 0; i < numKeys; i++)
     {
         // Figure out how many rooms are behind each door
-        countRoomsAfterDoors(&dungeon, startRoom.x, startRoom.y, true);
+        countRoomsAfterDoors(&dungeon, startRoom.x, startRoom.y);
 
         // Each partition in the maze should be about this size
         int tpSize = (dungeon.maze[startRoom.x][startRoom.y].numChildren + 1) /
