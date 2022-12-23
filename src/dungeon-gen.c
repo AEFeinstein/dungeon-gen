@@ -30,11 +30,11 @@ int main(void)
     // Turtle Rock		46
 
     // Dungeon size
-    int mazeW = 8;
-    int mazeH = 8;
+    int width = 8;
+    int height = 8;
 
     // The keys and locks to place
-    roomType_t goals[] =
+    keyType_t goals[] =
     {
         KEY_7,
         KEY_6,
@@ -48,21 +48,21 @@ int main(void)
 
     // Create and connect dungeon
     dungeon_t dungeon;
-    initDungeon(&dungeon, mazeW, mazeH);
+    initDungeon(&dungeon, width, height);
     connectDungeonEllers(&dungeon);
 
     // Place the start
-    coord_t startRoom = {.x = mazeW / 2, .y = mazeH - 1};
-    dungeon.maze[startRoom.x][startRoom.y].type = DUNGEON_START;
+    coord_t startRoom = {.x = width / 2, .y = height - 1};
+    dungeon.rooms[startRoom.x][startRoom.y].isStart = true;
 
-    // Place locks by partitioning the maze into roughly equal size chunks
+    // Place locks by partitioning the dungeon into roughly equal size chunks
     for(uint8_t i = 0; i < numKeys; i++)
     {
         // Figure out how many rooms are behind each door
         countRoomsAfterDoors(&dungeon, startRoom.x, startRoom.y);
 
-        // Each partition in the maze should be about this size
-        int tpSize = (dungeon.maze[startRoom.x][startRoom.y].numChildren + 1) /
+        // Each partition in the dungeon should be about this size
+        int tpSize = (dungeon.rooms[startRoom.x][startRoom.y].numChildren + 1) /
                     (numKeys + 1 - i);
 
         // Find the door that best partitions the dungeon
@@ -81,10 +81,10 @@ int main(void)
         }
 
         // Lock the door
-        bestDoor->type = goals[i];
+        bestDoor->lock = goals[i];
 
         // Find the room after the lock
-        mazeCell_t * roomAfterLock;
+        room_t * roomAfterLock;
         if(bestDoor->rooms[0]->numChildren < bestDoor->numChildren)
         {
             roomAfterLock = bestDoor->rooms[0];
@@ -113,18 +113,18 @@ int main(void)
     {
         for(int x = 0; x < dungeon.w; x++)
         {
-            if(dungeon.maze[x][y].partition == goals[0])
+            if(dungeon.rooms[x][y].partition == goals[0])
             {
-                if(dungeon.maze[x][y].dist > greatestDist)
+                if(dungeon.rooms[x][y].dist > greatestDist)
                 {
-                    greatestDist = dungeon.maze[x][y].dist;
+                    greatestDist = dungeon.rooms[x][y].dist;
                     end.x = x;
                     end.y = y;
                 }
             }
         }
     }
-    dungeon.maze[end.x][end.y].type = DUNGEON_END;
+    dungeon.rooms[end.x][end.y].isEnd = true;
 
     // Save the image
     saveDungeonPng(&dungeon);

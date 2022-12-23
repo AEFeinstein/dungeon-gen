@@ -31,12 +31,12 @@ typedef enum
 //==============================================================================
 
 #ifdef DBG_PRINT
-void printRow(int y, int mazeW, mazeCell_t ** maze);
+void printRow(int y, int width, room_t ** rooms);
 #endif
 
 void mergeSets(dungeon_t * dungeon, int x, int y);
 void fisherYates(int * arr, int len);
-uint32_t roomColor(roomType_t type);
+uint32_t roomColor(keyType_t type, bool isStart, bool isEnd, bool isDeadEnd);
 
 //==============================================================================
 // Defines
@@ -67,63 +67,53 @@ const coord_t cardinals[DOOR_MAX] =
  * @brief TODO doc
  * 
  * @param dungeon 
- * @param mazeW 
- * @param mazeH 
+ * @param width 
+ * @param height 
  */
-void initDungeon(dungeon_t * dungeon, int mazeW, int mazeH)
+void initDungeon(dungeon_t * dungeon, int width, int height)
 {
     // Save width and height
-    dungeon->w = mazeW;
-    dungeon->h = mazeH;
+    dungeon->w = width;
+    dungeon->h = height;
 
     // Allocate rows
-    dungeon->maze = (mazeCell_t**)calloc(mazeW, sizeof(mazeCell_t*));
+    dungeon->rooms = (room_t**)calloc(width, sizeof(room_t*));
     // Allocate columns
-    for(int i = 0; i < mazeW; i++)
+    for(int i = 0; i < width; i++)
     {
-        dungeon->maze[i] = (mazeCell_t*)calloc(mazeH, sizeof(mazeCell_t));
+        dungeon->rooms[i] = (room_t*)calloc(height, sizeof(room_t));
     }
 
     // Allocate doors
-    dungeon->numDoors = (mazeW * (mazeH - 1)) + ((mazeW - 1) * mazeH);
+    dungeon->numDoors = (width * (height - 1)) + ((width - 1) * height);
     dungeon->doors = calloc(dungeon->numDoors, sizeof(door_t));
     int doorIdx = 0;
 
-    // Number the rooms
-    for(int y = 0; y < mazeH; y++)
-    {
-        for(int x = 0; x < mazeW; x++)
-        {
-            dungeon->maze[x][y].x = x;
-            dungeon->maze[x][y].y = y;
-        }
-    }
-
     // Connect left/right doors
-    for(int y = 0; y < mazeH; y++)
+    for(int y = 0; y < height; y++)
     {
-        for(int x = 0; x < mazeW - 1; x++)
+        for(int x = 0; x < width - 1; x++)
         {
-            dungeon->maze[x    ][y].doors[DOOR_RIGHT] = &dungeon->doors[doorIdx];
-            dungeon->maze[x + 1][y].doors[DOOR_LEFT] = &dungeon->doors[doorIdx];
+            dungeon->rooms[x    ][y].doors[DOOR_RIGHT] = &dungeon->doors[doorIdx];
+            dungeon->rooms[x + 1][y].doors[DOOR_LEFT] = &dungeon->doors[doorIdx];
 
-            dungeon->doors[doorIdx].rooms[0] = &dungeon->maze[x    ][y];
-            dungeon->doors[doorIdx].rooms[1] = &dungeon->maze[x + 1][y];
+            dungeon->doors[doorIdx].rooms[0] = &dungeon->rooms[x    ][y];
+            dungeon->doors[doorIdx].rooms[1] = &dungeon->rooms[x + 1][y];
 
             doorIdx++;
         }
     }
 
     // Connect up/down doors
-    for(int y = 0; y < mazeH - 1; y++)
+    for(int y = 0; y < height - 1; y++)
     {
-        for(int x = 0; x < mazeW; x++)
+        for(int x = 0; x < width; x++)
         {
-            dungeon->maze[x][y    ].doors[DOOR_DOWN] = &dungeon->doors[doorIdx];
-            dungeon->maze[x][y + 1].doors[DOOR_UP] = &dungeon->doors[doorIdx];
+            dungeon->rooms[x][y    ].doors[DOOR_DOWN] = &dungeon->doors[doorIdx];
+            dungeon->rooms[x][y + 1].doors[DOOR_UP] = &dungeon->doors[doorIdx];
 
-            dungeon->doors[doorIdx].rooms[0] = &dungeon->maze[x][y    ];
-            dungeon->doors[doorIdx].rooms[1] = &dungeon->maze[x][y + 1];
+            dungeon->doors[doorIdx].rooms[0] = &dungeon->rooms[x][y    ];
+            dungeon->doors[doorIdx].rooms[1] = &dungeon->rooms[x][y + 1];
 
             doorIdx++;
         }
@@ -142,10 +132,10 @@ void freeDungeon(dungeon_t * dungeon)
     // Free columns
     for(int i = 0; i < dungeon->w; i++)
     {
-        free(dungeon->maze[i]);
+        free(dungeon->rooms[i]);
     }
     // Free rows
-    free(dungeon->maze);
+    free(dungeon->rooms);
 }
 
 /**
@@ -158,48 +148,48 @@ void connectDungeonEllers(dungeon_t * dungeon)
     // Keep track of which set each room belongs to
     int32_t setIdx = 1;
 
-    // For each row of the maze
+    // For each row of the dungeon
     for(int y = 0; y < dungeon->h; y++)
     {
         // First, assign sets to cells without them 
         for(int x = 0; x < dungeon->w; x++)
         {
-            if(0 == dungeon->maze[x][y].set)
+            if(0 == dungeon->rooms[x][y].set)
             {
-                dungeon->maze[x][y].set = setIdx;
+                dungeon->rooms[x][y].set = setIdx;
                 setIdx++;
             }
         }
 
 #ifdef DBG_PRINT
         printf("Starting row %d\n", y);
-        printRow(y, dungeon->w, dungeon->maze);
+        printRow(y, dungeon->w, dungeon->rooms);
 #endif
 
         // Then, randomly create LR walls
         for(int x = 0; x < dungeon->w - 1; x++)
         {
             // 50% chance, but also make walls between cells of the same set to avoid loops
-            if((dungeon->maze[x][y].set == dungeon->maze[x+1][y].set) || (rand() % 2))
+            if((dungeon->rooms[x][y].set == dungeon->rooms[x+1][y].set) || (rand() % 2))
             {
-                dungeon->maze[x][y].doors[DOOR_RIGHT]->isDoor = false;
+                dungeon->rooms[x][y].doors[DOOR_RIGHT]->isDoor = false;
 
 #ifdef DBG_PRINT
                 printf("Add LR wall\n");
-                printRow(y, dungeon->w, dungeon->maze);
+                printRow(y, dungeon->w, dungeon->rooms);
 #endif
             }
             else
             {
                 // Mark this as a door
-                dungeon->maze[x][y].doors[DOOR_RIGHT]->isDoor = true;
+                dungeon->rooms[x][y].doors[DOOR_RIGHT]->isDoor = true;
 
                 // Merge the sets by overwriting all olds with news in this row
                 mergeSets(dungeon, x, y);
 
 #ifdef DBG_PRINT
                 printf("Add LR door\n");
-                printRow(y, dungeon->w, dungeon->maze);
+                printRow(y, dungeon->w, dungeon->rooms);
 #endif
             }
         }
@@ -217,24 +207,24 @@ void connectDungeonEllers(dungeon_t * dungeon)
                 if(rand() % 2)
                 {
                     // If this is a door, mark both cells as part of the same set
-                    dungeon->maze[x][y].doors[DOOR_DOWN]->isDoor = true;
-                    dungeon->maze[x][y + 1].set = dungeon->maze[x][y].set;
+                    dungeon->rooms[x][y].doors[DOOR_DOWN]->isDoor = true;
+                    dungeon->rooms[x][y + 1].set = dungeon->rooms[x][y].set;
 
                     // Record this set as connected
-                    setsWithDoors[swdIdx++] = dungeon->maze[x][y].set;
+                    setsWithDoors[swdIdx++] = dungeon->rooms[x][y].set;
 
 #ifdef DBG_PRINT
                     printf("Add UD door\n");
-                    printRow(y, dungeon->w, dungeon->maze);
+                    printRow(y, dungeon->w, dungeon->rooms);
 #endif
                 }
                 else
                 {
-                    dungeon->maze[x][y].doors[DOOR_DOWN]->isDoor = false;
+                    dungeon->rooms[x][y].doors[DOOR_DOWN]->isDoor = false;
 
 #ifdef DBG_PRINT
                     printf("Add UD wall\n");
-                    printRow(y, dungeon->w, dungeon->maze);
+                    printRow(y, dungeon->w, dungeon->rooms);
 #endif
                 }
             }
@@ -246,7 +236,7 @@ void connectDungeonEllers(dungeon_t * dungeon)
                 bool setHasDoor = false;
                 for(int i = 0; i < swdIdx; i++)
                 {
-                    if(setsWithDoors[i] == dungeon->maze[x][y].set)
+                    if(setsWithDoors[i] == dungeon->rooms[x][y].set)
                     {
                         setHasDoor = true;
                         break;
@@ -257,14 +247,14 @@ void connectDungeonEllers(dungeon_t * dungeon)
                 if(!setHasDoor)
                 {
                     // mark both cells as part of the same set
-                    dungeon->maze[x][y].doors[DOOR_DOWN]->isDoor = true;
-                    dungeon->maze[x][y + 1].set = dungeon->maze[x][y].set;
+                    dungeon->rooms[x][y].doors[DOOR_DOWN]->isDoor = true;
+                    dungeon->rooms[x][y + 1].set = dungeon->rooms[x][y].set;
 
-                    setsWithDoors[swdIdx++] = dungeon->maze[x][y].set;
+                    setsWithDoors[swdIdx++] = dungeon->rooms[x][y].set;
 
 #ifdef DBG_PRINT
                     printf("Add UD wall (mandatory)\n");
-                    printRow(y, dungeon->w, dungeon->maze);
+                    printRow(y, dungeon->w, dungeon->rooms);
 #endif
                 }
             }
@@ -274,22 +264,22 @@ void connectDungeonEllers(dungeon_t * dungeon)
             // Final row, make sure cells are connected
             for(int x = 0; x < dungeon->w - 1; x++)
             {
-                if(dungeon->maze[x][y].set != dungeon->maze[x+1][y].set)
+                if(dungeon->rooms[x][y].set != dungeon->rooms[x+1][y].set)
                 {
                     // Merge the sets by overwriting all olds with news in this row
                     mergeSets(dungeon, x, y);
-                    dungeon->maze[x][y].doors[DOOR_RIGHT]->isDoor = true;
+                    dungeon->rooms[x][y].doors[DOOR_RIGHT]->isDoor = true;
 
 #ifdef DBG_PRINT
                     printf("Add LR wall (last row)\n");
-                    printRow(y, dungeon->w, dungeon->maze);
+                    printRow(y, dungeon->w, dungeon->rooms);
 #endif
                 }
             }
         }
 #ifdef DBG_PRINT
         printf("Final\n");
-        printRow(y, dungeon->w, dungeon->maze);
+        printRow(y, dungeon->w, dungeon->rooms);
         printf("\n\n");
 #endif
     }
@@ -305,22 +295,22 @@ void connectDungeonEllers(dungeon_t * dungeon)
 void mergeSets(dungeon_t * dungeon, int x, int y)
 {
 	int newSet, oldSet;
-	if (dungeon->maze[x][y].set < dungeon->maze[x+1][y].set)
+	if (dungeon->rooms[x][y].set < dungeon->rooms[x+1][y].set)
 	{
-		newSet = dungeon->maze[x][y].set;
-		oldSet = dungeon->maze[x+1][y].set;
+		newSet = dungeon->rooms[x][y].set;
+		oldSet = dungeon->rooms[x+1][y].set;
 	}
 	else
 	{
-		newSet = dungeon->maze[x+1][y].set;
-		oldSet = dungeon->maze[x][y].set;
+		newSet = dungeon->rooms[x+1][y].set;
+		oldSet = dungeon->rooms[x][y].set;
 	}
 
 	for(int mergeX = 0; mergeX < dungeon->w; mergeX++)
 	{
-		if(oldSet == dungeon->maze[mergeX][y].set)
+		if(oldSet == dungeon->rooms[mergeX][y].set)
 		{
-			dungeon->maze[mergeX][y].set = newSet;
+			dungeon->rooms[mergeX][y].set = newSet;
 		}
 	}
 }
@@ -334,7 +324,7 @@ void mergeSets(dungeon_t * dungeon, int x, int y)
  */
 bool isLocked(door_t * door)
 {
-    switch(door->type)
+    switch(door->lock)
     {
         case KEY_1:
         case KEY_2:
@@ -364,7 +354,7 @@ void clearDungeonDists(dungeon_t * dungeon)
     {
         for(int y = 0; y < dungeon->h; y++)
         {
-            dungeon->maze[x][y].dist = 0;
+            dungeon->rooms[x][y].dist = 0;
         }        
     }
 }
@@ -385,11 +375,11 @@ coord_t addDistFromRoom(dungeon_t * dungeon, uint16_t startX, uint16_t startY, b
     {
         for(int y = 0; y < dungeon->h; y++)
         {
-            dungeon->maze[x][y].visited = false;
+            dungeon->rooms[x][y].visited = false;
         }
     }
     // Except for the starting room
-    dungeon->maze[startX][startY].visited = true;
+    dungeon->rooms[startX][startY].visited = true;
 
     // Initialize a stack of unvisited rooms
     list_t unvisitedRooms = {0};
@@ -399,13 +389,13 @@ coord_t addDistFromRoom(dungeon_t * dungeon, uint16_t startX, uint16_t startY, b
     int16_t longestDist = 0;
     coord_t furthestRoom = {0};
 
-    // For the entire maze
+    // For the entire dungeon
     while(unvisitedRooms.length > 0)
     {
         void* poppedVal = pop(&unvisitedRooms);
         int cX = LIST_TO_X(poppedVal);
         int cY = LIST_TO_Y(poppedVal);
-        mazeCell_t * thisRoom = &(dungeon->maze[cX][cY]);
+        room_t * thisRoom = &(dungeon->rooms[cX][cY]);
 
         // Check all directions
         for(doorIdx dir = 0; dir < DOOR_MAX; ++dir)
@@ -415,7 +405,7 @@ coord_t addDistFromRoom(dungeon_t * dungeon, uint16_t startX, uint16_t startY, b
             {
                 uint16_t nextX = cX + cardinals[dir].x;
                 uint16_t nextY = cY + cardinals[dir].y;
-                mazeCell_t * nextRoom = &(dungeon->maze[nextX][nextY]);
+                room_t * nextRoom = &(dungeon->rooms[nextX][nextY]);
                 // If this room hasn't been visited yet
                 if(false == nextRoom->visited)
                 {
@@ -454,8 +444,8 @@ void countRoomsAfterDoors(dungeon_t * dungeon, uint16_t startX, uint16_t startY)
     {
         for(int y = 0; y < dungeon->h; y++)
         {
-            dungeon->maze[x][y].visited = false;
-            dungeon->maze[x][y].numChildren = 0;
+            dungeon->rooms[x][y].visited = false;
+            dungeon->rooms[x][y].numChildren = 0;
         }
     }
     for(int d = 0; d < dungeon->numDoors; d++)
@@ -466,10 +456,10 @@ void countRoomsAfterDoors(dungeon_t * dungeon, uint16_t startX, uint16_t startY)
     // Build a list of rooms to visit, reverse-depth-first order 
     list_t rDepthFirstOrder = {0};
     list_t roomStack = {0};
-    push(&roomStack, &(dungeon->maze[startX][startY]));
+    push(&roomStack, &(dungeon->rooms[startX][startY]));
     while(0 != roomStack.length)
     {
-        mazeCell_t * thisRoom = pop(&roomStack);
+        room_t * thisRoom = pop(&roomStack);
         push(&rDepthFirstOrder, thisRoom);
 
         // Mark this room as visited
@@ -483,7 +473,7 @@ void countRoomsAfterDoors(dungeon_t * dungeon, uint16_t startX, uint16_t startY)
             if( door && door->isDoor && !isLocked(door))
             {
                 // Get the next room through the door
-                mazeCell_t * nextRoom = door->rooms[0] == thisRoom ? door->rooms[1] : door->rooms[0];
+                room_t * nextRoom = door->rooms[0] == thisRoom ? door->rooms[1] : door->rooms[0];
                 // If the next room hasn't been visited yet, push it onto the stack
                 if(!nextRoom->visited)
                 {
@@ -498,14 +488,14 @@ void countRoomsAfterDoors(dungeon_t * dungeon, uint16_t startX, uint16_t startY)
     {
         for(int y = 0; y < dungeon->h; y++)
         {
-            dungeon->maze[x][y].visited = false;
+            dungeon->rooms[x][y].visited = false;
         }
     }
     
     // Visit all rooms, reverse depth first order
     while(rDepthFirstOrder.length > 0)
     {
-        mazeCell_t * thisRoom = pop(&rDepthFirstOrder);
+        room_t * thisRoom = pop(&rDepthFirstOrder);
         thisRoom->visited = true;
 
         // Check all directions
@@ -516,7 +506,7 @@ void countRoomsAfterDoors(dungeon_t * dungeon, uint16_t startX, uint16_t startY)
             if( door && door->isDoor && !isLocked(door))
             {
                 // Get the other room
-                mazeCell_t * nextRoom = door->rooms[0] == thisRoom ? door->rooms[1] : door->rooms[0];
+                room_t * nextRoom = door->rooms[0] == thisRoom ? door->rooms[1] : door->rooms[0];
                 // If it's been visited already (i.e. working backwards)
                 if(nextRoom->visited)
                 {
@@ -536,14 +526,14 @@ void countRoomsAfterDoors(dungeon_t * dungeon, uint16_t startX, uint16_t startY)
  * @param startingRoom
  * @param partition
  */
-void setPartitions(dungeon_t * dungeon, mazeCell_t * startingRoom, roomType_t partition)
+void setPartitions(dungeon_t * dungeon, room_t * startingRoom, keyType_t partition)
 {
     // Mark all cells as not visited
     for(int x = 0; x < dungeon->w; x++)
     {
         for(int y = 0; y < dungeon->h; y++)
         {
-            dungeon->maze[x][y].visited = false;
+            dungeon->rooms[x][y].visited = false;
         }
     }
 
@@ -552,7 +542,7 @@ void setPartitions(dungeon_t * dungeon, mazeCell_t * startingRoom, roomType_t pa
 
     while(0 != roomStack.length)
     {
-        mazeCell_t * thisRoom = pop(&roomStack);
+        room_t * thisRoom = pop(&roomStack);
 
         // Mark this room's partition
         thisRoom->partition = partition;
@@ -566,7 +556,7 @@ void setPartitions(dungeon_t * dungeon, mazeCell_t * startingRoom, roomType_t pa
             if( door && door->isDoor && !isLocked(door))
             {
                 // Get the next room through the door
-                mazeCell_t * nextRoom = door->rooms[0] == thisRoom ? door->rooms[1] : door->rooms[0];
+                room_t * nextRoom = door->rooms[0] == thisRoom ? door->rooms[1] : door->rooms[0];
                 // If the next room hasn't been visited yet, push it onto the stack
                 if(!nextRoom->visited)
                 {
@@ -584,7 +574,7 @@ void setPartitions(dungeon_t * dungeon, mazeCell_t * startingRoom, roomType_t pa
  * @param keys
  * @param numKeys
  */
-void placeKeys(dungeon_t * dungeon, const roomType_t * keys, int numKeys)
+void placeKeys(dungeon_t * dungeon, const keyType_t * keys, int numKeys)
 {
     int allRooms[dungeon->w * dungeon->h];
     for(int i = 0; i < dungeon->w * dungeon->h; i++)
@@ -602,13 +592,21 @@ void placeKeys(dungeon_t * dungeon, const roomType_t * keys, int numKeys)
         int x = allRooms[i] % dungeon->w;
         int y = allRooms[i] / dungeon->w;
 
+        room_t * room = &(dungeon->rooms[x][y]);
+
+        // Don't place items in start or end
+        if(room->isStart || room->isEnd)
+        {
+            continue;
+        }
+
         for(int kIdx = numKeys - 1; kIdx >= 0; kIdx--)
         {
             if(false == keysPlaced[kIdx])
             {
-                if((DEAD_END == dungeon->maze[x][y].type) && dungeon->maze[x][y].partition == (keys[kIdx] - 1))
+                if((room->isDeadEnd) && room->partition == (keys[kIdx] - 1))
                 {
-                    dungeon->maze[x][y].type = keys[kIdx];
+                    room->treasure = keys[kIdx];
                     keysPlaced[kIdx] = true;
                     break;
                 }
@@ -622,13 +620,21 @@ void placeKeys(dungeon_t * dungeon, const roomType_t * keys, int numKeys)
         int x = allRooms[i] % dungeon->w;
         int y = allRooms[i] / dungeon->w;
 
+        room_t * room = &(dungeon->rooms[x][y]);
+
+        // Don't place items in start or end
+        if(room->isStart || room->isEnd)
+        {
+            continue;
+        }
+        
         for(int kIdx = numKeys - 1; kIdx >= 0; kIdx--)
         {
             if(false == keysPlaced[kIdx])
             {
-                if(dungeon->maze[x][y].partition < keys[kIdx])
+                if(room->partition < keys[kIdx])
                 {
-                    dungeon->maze[x][y].type = keys[kIdx];
+                    room->treasure = keys[kIdx];
                     keysPlaced[kIdx] = true;
                     break;
                 }
@@ -671,13 +677,13 @@ void markDeadEnds(dungeon_t * dungeon)
         for(int x = 0; x < dungeon->w; x++)
         {
             int numDoors = 0;
-            numDoors += (dungeon->maze[x][y].doors[DOOR_UP] && dungeon->maze[x][y].doors[DOOR_UP]->isDoor) ? 1 : 0;
-            numDoors += (dungeon->maze[x][y].doors[DOOR_DOWN] && dungeon->maze[x][y].doors[DOOR_DOWN]->isDoor) ? 1 : 0;
-            numDoors += (dungeon->maze[x][y].doors[DOOR_LEFT] && dungeon->maze[x][y].doors[DOOR_LEFT]->isDoor) ? 1 : 0;
-            numDoors += (dungeon->maze[x][y].doors[DOOR_RIGHT] && dungeon->maze[x][y].doors[DOOR_RIGHT]->isDoor) ? 1 : 0;
-            if(1 == numDoors && EMPTY_ROOM == dungeon->maze[x][y].type)
+            numDoors += (dungeon->rooms[x][y].doors[DOOR_UP] && dungeon->rooms[x][y].doors[DOOR_UP]->isDoor) ? 1 : 0;
+            numDoors += (dungeon->rooms[x][y].doors[DOOR_DOWN] && dungeon->rooms[x][y].doors[DOOR_DOWN]->isDoor) ? 1 : 0;
+            numDoors += (dungeon->rooms[x][y].doors[DOOR_LEFT] && dungeon->rooms[x][y].doors[DOOR_LEFT]->isDoor) ? 1 : 0;
+            numDoors += (dungeon->rooms[x][y].doors[DOOR_RIGHT] && dungeon->rooms[x][y].doors[DOOR_RIGHT]->isDoor) ? 1 : 0;
+            if(1 == numDoors)
             {
-                dungeon->maze[x][y].type = DEAD_END;
+                dungeon->rooms[x][y].isDeadEnd = true;
             }
         }
     }
@@ -706,46 +712,47 @@ void saveDungeonPng(dungeon_t * dungeon)
                     if(0 == roomY || 0 == roomX || ROOM_SIZE-1 == roomY || ROOM_SIZE-1 == roomX)
                     {
                         data[pxIdx] = 0xFF000000;
-                        if(dungeon->maze[x][y].doors[DOOR_UP] && dungeon->maze[x][y].doors[DOOR_UP]->isDoor) // up
+                        if(dungeon->rooms[x][y].doors[DOOR_UP] && dungeon->rooms[x][y].doors[DOOR_UP]->isDoor) // up
                         {
                             if(0 == roomY && ROOM_SIZE/2 == roomX)
                             {
-                                data[pxIdx] = roomColor(dungeon->maze[x][y].doors[DOOR_UP]->type);
+                                data[pxIdx] = roomColor(dungeon->rooms[x][y].doors[DOOR_UP]->lock, false, false, false);
                             }
                         }
 
-                        if(dungeon->maze[x][y].doors[DOOR_DOWN] && dungeon->maze[x][y].doors[DOOR_DOWN]->isDoor) // down
+                        if(dungeon->rooms[x][y].doors[DOOR_DOWN] && dungeon->rooms[x][y].doors[DOOR_DOWN]->isDoor) // down
                         {
                             if(ROOM_SIZE-1 == roomY && ROOM_SIZE/2 == roomX)
                             {
-                                data[pxIdx] = roomColor(dungeon->maze[x][y].doors[DOOR_DOWN]->type);
+                                data[pxIdx] = roomColor(dungeon->rooms[x][y].doors[DOOR_DOWN]->lock, false, false, false);
                             }
                         }
 
-                        if(dungeon->maze[x][y].doors[DOOR_LEFT] && dungeon->maze[x][y].doors[DOOR_LEFT]->isDoor) // left
+                        if(dungeon->rooms[x][y].doors[DOOR_LEFT] && dungeon->rooms[x][y].doors[DOOR_LEFT]->isDoor) // left
                         {
                             if(0 == roomX && ROOM_SIZE/2 == roomY)
                             {
-                                data[pxIdx] = roomColor(dungeon->maze[x][y].doors[DOOR_LEFT]->type);
+                                data[pxIdx] = roomColor(dungeon->rooms[x][y].doors[DOOR_LEFT]->lock, false, false, false);
                             }
                         }
 
-                        if(dungeon->maze[x][y].doors[DOOR_RIGHT] && dungeon->maze[x][y].doors[DOOR_RIGHT]->isDoor) // right
+                        if(dungeon->rooms[x][y].doors[DOOR_RIGHT] && dungeon->rooms[x][y].doors[DOOR_RIGHT]->isDoor) // right
                         {
                             if(ROOM_SIZE-1 == roomX && ROOM_SIZE/2 == roomY)
                             {
-                                data[pxIdx] = roomColor(dungeon->maze[x][y].doors[DOOR_RIGHT]->type);
+                                data[pxIdx] = roomColor(dungeon->rooms[x][y].doors[DOOR_RIGHT]->lock, false, false, false);
                             }
                         }
                     }
                     else
                     {
-                        data[pxIdx] = roomColor(dungeon->maze[x][y].partition);
-                        if(EMPTY_ROOM != dungeon->maze[x][y].type)
+                        room_t * room = &dungeon->rooms[x][y];
+                        data[pxIdx] = roomColor(room->partition, room->isStart, room->isEnd, false);
+                        if((roomX == ROOM_SIZE / 2) && (roomY == ROOM_SIZE / 2))
                         {
-                            if((roomX == ROOM_SIZE / 2) && (roomY == ROOM_SIZE / 2))
+                            if(EMPTY_ROOM != dungeon->rooms[x][y].treasure || room->isStart || room->isEnd || room->isDeadEnd)
                             {
-                                data[pxIdx] = roomColor(dungeon->maze[x][y].type);
+                                data[pxIdx] = roomColor(room->treasure, room->isStart, room->isEnd, room->isDeadEnd);
                             }
                         }
                     }
@@ -754,7 +761,7 @@ void saveDungeonPng(dungeon_t * dungeon)
         }
     }
 
-    stbi_write_png("maze.png", dungeon->w * ROOM_SIZE, dungeon->h * ROOM_SIZE, 4, data, 4 * dungeon->w * ROOM_SIZE);
+    stbi_write_png("rooms.png", dungeon->w * ROOM_SIZE, dungeon->h * ROOM_SIZE, 4, data, 4 * dungeon->w * ROOM_SIZE);
     free(data);
 }
 
@@ -764,56 +771,60 @@ void saveDungeonPng(dungeon_t * dungeon)
  * @param type
  * @return uint32_t
  */
-uint32_t roomColor(roomType_t type)
+uint32_t roomColor(keyType_t type, bool isStart, bool isEnd, bool isDeadEnd)
 {
-    switch(type)
+    if(isStart)
     {
-        case EMPTY_ROOM:
+        return 0xFFFF0000;
+    }
+    else if(isEnd)
+    {
+        return 0xFF0000FF;
+    }
+    else
+    {
+        switch(type)
         {
-            return 0xFFFFFFFF;
+            case EMPTY_ROOM:
+            {
+                break;
+            }
+            case KEY_1:
+            {
+                return 0xFF7766EE;
+            }
+            case KEY_2:
+            {
+                return 0xFF338822;
+            }
+            case KEY_3:
+            {
+                return 0xFFAA7744;
+            }
+            case KEY_4:
+            {
+                return 0xFF44BBCC;
+            }
+            case KEY_5:
+            {
+                return 0xFFEECC66;
+            }
+            case KEY_6:
+            {
+                return 0xFF7733AA;
+            }
+            case KEY_7:
+            {
+                return 0xFFBBBBBB;
+            }
         }
-        case DUNGEON_START:
-        {
-            return 0xFFFF0000;
-        }
-        case DUNGEON_END:
-        {
-            return 0xFF0000FF;
-        }
-        case DEAD_END:
+        
+        if (isDeadEnd)
         {
             return 0xFF000000;
         }
-        case KEY_1:
-        {
-            return 0xFF7766EE;
-        }
-        case KEY_2:
-        {
-            return 0xFF338822;
-        }
-        case KEY_3:
-        {
-            return 0xFFAA7744;
-        }
-        case KEY_4:
-        {
-            return 0xFF44BBCC;
-        }
-        case KEY_5:
-        {
-            return 0xFFEECC66;
-        }
-        case KEY_6:
-        {
-            return 0xFF7733AA;
-        }
-        case KEY_7:
-        {
-            return 0xFFBBBBBB;
-        }
     }
-    return 0x00000000;
+    return 0xFFFFFFFF;
 }
 
 #ifdef DBG_PRINT
@@ -821,15 +832,15 @@ uint32_t roomColor(roomType_t type)
  * @brief TODO doc
  * 
  * @param y 
- * @param mazeW 
- * @param maze 
+ * @param width 
+ * @param rooms 
  */
-void printRow(int y, int mazeW, mazeCell_t ** maze)
+void printRow(int y, int width, room_t ** rooms)
 {
-    for(int x = 0; x < mazeW; x++)
+    for(int x = 0; x < width; x++)
     {
-        printf("%2d", maze[x][y].set);
-        if(maze[x][y].doors[DOOR_RIGHT] && !maze[x][y].doors[DOOR_RIGHT]->isDoor)
+        printf("%2d", rooms[x][y].set);
+        if(rooms[x][y].doors[DOOR_RIGHT] && !rooms[x][y].doors[DOOR_RIGHT]->isDoor)
         {
             printf("|");
         }
@@ -839,9 +850,9 @@ void printRow(int y, int mazeW, mazeCell_t ** maze)
         }
     }
     printf("\n");
-    for(int x = 0; x < mazeW; x++)
+    for(int x = 0; x < width; x++)
     {
-        if(maze[x][y].doors[DOOR_DOWN] && maze[x][y].doors[DOOR_DOWN]->isDoor)
+        if(rooms[x][y].doors[DOOR_DOWN] && rooms[x][y].doors[DOOR_DOWN]->isDoor)
         {
             printf("   ");
         }
