@@ -1,9 +1,9 @@
 /*
-*   linked_list.h
-*
-*   Created on: Sept 12, 2019
-*       Author: Jonathan Moriarty
-*/
+ *   linked_list.h
+ *
+ *   Created on: Sept 12, 2019
+ *       Author: Jonathan Moriarty
+ */
 
 #ifndef _LINKED_LIST_H
 #define _LINKED_LIST_H

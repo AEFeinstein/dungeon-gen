@@ -4,6 +4,15 @@
         "stb_image.h": "c",
         "stb_image_write.h": "c",
         "stdbool.h": "c",
-        "linked_list.h": "c"
-    }
+        "linked_list.h": "c",
+        "mutex": "c",
+        "shared_mutex": "c",
+        "pngdungeonwriter.h": "c",
+        "dungeon.h": "c",
+        "stdlib.h": "c",
+        "rmddungeonwriter.h": "c"
+    },
+    "cSpell.words": [
+        "Ellers"
+    ]
 }

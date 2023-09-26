@@ -4,7 +4,26 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-typedef enum 
+//==============================================================================
+// Defines
+//==============================================================================
+
+#define ABS(x) (((x) < 0) ? -(x) : (x))
+
+//==============================================================================
+// Enums
+//==============================================================================
+
+typedef enum
+{
+    DOOR_UP,
+    DOOR_DOWN,
+    DOOR_LEFT,
+    DOOR_RIGHT,
+    DOOR_MAX
+} doorIdx;
+
+typedef enum
 {
     EMPTY_ROOM,
     KEY_1,
@@ -14,7 +33,20 @@ typedef enum
     KEY_5,
     KEY_6,
     KEY_7,
+    KEY_8,
+    KEY_9,
+    KEY_10,
+    KEY_11,
+    KEY_12,
+    KEY_13,
+    KEY_14,
+    KEY_15,
+    KEY_16,
 } keyType_t;
+
+//==============================================================================
+// Structs
+//==============================================================================
 
 struct _door;
 struct _room;
@@ -36,7 +68,7 @@ typedef struct _door
     /**
      * All the rooms connecting to this door
      */
-    struct _room * rooms[2];
+    struct _room* rooms[2];
 } door_t;
 
 typedef struct _room
@@ -55,13 +87,13 @@ typedef struct _room
      */
     keyType_t partition;
     /**
-     * This room's set, used for Eller's maze generation algorithm
+     * This room's set, used for Ellers maze generation algorithm
      */
     int32_t set;
     /**
      * All the doors connecting to this room
      */
-    door_t * doors[4];
+    door_t* doors[4];
     /**
      * temp var, the distance between this room and some other room
      */
@@ -78,8 +110,8 @@ typedef struct _room
 
 typedef struct
 {
-    room_t ** rooms;
-    door_t * doors;
+    room_t** rooms;
+    door_t* doors;
     int w;
     int h;
     int numDoors;
@@ -91,19 +123,24 @@ typedef struct
     int y;
 } coord_t;
 
-void initDungeon(dungeon_t * dungeon, int width, int height);
-void freeDungeon(dungeon_t * dungeon);
+//==============================================================================
+// Functions
+//==============================================================================
 
-void connectDungeonEllers(dungeon_t * dungeon);
-void connectDungeonRecursive(dungeon_t * dungeon);
+void initDungeon(dungeon_t* dungeon, int width, int height);
+void freeDungeon(dungeon_t* dungeon);
 
-void saveDungeonPng(dungeon_t * dungeon);
+void connectDungeonEllers(dungeon_t* dungeon);
+void connectDungeonRecursive(dungeon_t* dungeon);
 
-void clearDungeonDists(dungeon_t * dungeon);
-coord_t addDistFromRoom(dungeon_t * dungeon, uint16_t startX, uint16_t startY, bool ignoreLocks);
-void countRoomsAfterDoors(dungeon_t * dungeon, uint16_t startX, uint16_t startY);
-void setPartitions(dungeon_t * dungeon, room_t * startingRoom, keyType_t partition);
-void markDeadEnds(dungeon_t * dungeon);
-void placeKeys(dungeon_t * dungeon, const keyType_t * keys, int numKeys);
+void clearDungeonDistances(dungeon_t* dungeon);
+coord_t addDistFromRoom(dungeon_t* dungeon, uint16_t startX, uint16_t startY, bool ignoreLocks);
+void countRoomsAfterDoors(dungeon_t* dungeon, uint16_t startX, uint16_t startY);
+
+void setPartitions(dungeon_t* dungeon, room_t* startingRoom, keyType_t partition);
+void markDeadEnds(dungeon_t* dungeon);
+void placeLocks(dungeon_t* dungeon, const keyType_t* goals, int numKeys, coord_t startRoom);
+void placeKeys(dungeon_t* dungeon, const keyType_t* keys, int numKeys);
+void markEnd(dungeon_t* dungeon, coord_t startRoom, keyType_t finalPartition);
 
 #endif

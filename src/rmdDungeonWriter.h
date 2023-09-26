@@ -1,0 +1,5 @@
+#pragma once
+
+#include "dungeon.h"
+
+void saveDungeonRmd(dungeon_t* dungeon);

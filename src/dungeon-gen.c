@@ -4,47 +4,163 @@
 #include <time.h>
 #include <stdint.h>
 #include <string.h>
+#include <unistd.h>
+#include <ctype.h>
 
 #include "dungeon.h"
 #include "linked_list.h"
+#include "rmdDungeonWriter.h"
+#include "pngDungeonWriter.h"
 
-#define ABS(x) (((x) < 0) ? -(x) : (x))
+// Sizes of dungeons in Link's Awakening
+// Tail Cave		25
+// Bottle Grotto	26
+// Key Cavern		29
+// Anglers Tunnel	28
+// Catfish's Maw	34
+// Face Shrine		40
+// Eagle's Tower	34
+// Turtle Rock		46
 
-int main(void)
+/**
+ * @brief Helper function to print instructions and exit
+ *
+ * @param progName
+ */
+void printAndExit(char* progName)
 {
+    fprintf(stderr, "Usage: %s [-w width] [-h height] [-k key_string]\n", progName);
+    fprintf(stderr, "    key_string represents the type and order of keys placed in the map.\n");
+    fprintf(stderr, "    key_string may not contain duplicate chars.\n");
+    fprintf(stderr, "    key_string is a list of the following chars.\n");
+    fprintf(stderr, "        c   = charge\n");
+    fprintf(stderr, "        m   = missile\n");
+    fprintf(stderr, "        i   = ice\n");
+    fprintf(stderr, "        x   = xray\n");
+    fprintf(stderr, "        l   = lava\n");
+    fprintf(stderr, "        w   = water\n");
+    fprintf(stderr, "        0-9 = small key\n");
+    exit(EXIT_FAILURE);
+}
+
+/**
+ * @brief Main function
+ *
+ * @param argc count of arguments
+ * @param argv Array of string arguments
+ * @return EXIT_FAILURE if there was an error, EXIT_SUCCESS if all is good
+ */
+int main(int argc, char** argv)
+{
+    // Dungeon size
+    int width  = 0;
+    int height = 0;
+    // Key type and order
+    char* keyStr = NULL;
+
+    // Read arguments
+    int opt;
+    while ((opt = getopt(argc, argv, "w:h:k:")) != -1)
+    {
+        switch (opt)
+        {
+            case 'w':
+            {
+                width = atoi(optarg);
+                break;
+            }
+            case 'h':
+            {
+                height = atoi(optarg);
+                break;
+            }
+            case 'k':
+            {
+                keyStr = optarg;
+                break;
+            }
+            default:
+            {
+                printAndExit(argv[0]);
+            }
+        }
+    }
+
+    // Make sure all arguments are supplied
+    if (0 == width || 0 == height || NULL == keyStr)
+    {
+        printAndExit(argv[0]);
+    }
+
+    // Translate the key string to a list of keys
+    int numKeys = strlen(keyStr);
+    keyType_t goals[numKeys];
+    for (int kIdx = 0; kIdx < numKeys; kIdx++)
+    {
+        keyStr[kIdx] = tolower(keyStr[kIdx]);
+        switch (keyStr[kIdx])
+        {
+            case 'c':
+            {
+                // KEY_1 is charge beam
+                goals[kIdx] = KEY_1;
+                break;
+            }
+            case 'm':
+            {
+                // KEY_2 is missiles
+                goals[kIdx] = KEY_2;
+                break;
+            }
+            case 'l':
+            {
+                // KEY_3 is lava suit
+                goals[kIdx] = KEY_3;
+                break;
+            }
+            case 'i':
+            {
+                // KEY_4 is ice beam
+                goals[kIdx] = KEY_4;
+                break;
+            }
+            case 'w':
+            {
+                // KEY_5 is water suit
+                goals[kIdx] = KEY_5;
+                break;
+            }
+            case 'x':
+            {
+                // KEY_6 is xray visor
+                goals[kIdx] = KEY_6;
+                break;
+            }
+            case '0':
+            case '1':
+            case '2':
+            case '3':
+            case '4':
+            case '5':
+            case '6':
+            case '7':
+            case '8':
+            case '9':
+            {
+                // Numerals are KEY_7 through KEY_16
+                goals[kIdx] = KEY_7 + (keyStr[kIdx] - '0');
+                break;
+            }
+            default:
+            {
+                printAndExit(argv[0]);
+            }
+        }
+    }
+
     // Use a different seed value so that we don't get same
     // result each time we run this program
-    srand ( time(NULL) );
-
-#ifdef RUN_LINKED_LIST_TESTS
-    listTester();
-#endif
-
-    // Tail Cave		25
-    // Bottle Grotto	26
-    // Key Cavern		29
-    // Anglers Tunnel	28
-    // Catfish's Maw	34
-    // Face Shrine		40
-    // Eagle's Tower	34
-    // Turtle Rock		46
-
-    // Dungeon size
-    int width = 8;
-    int height = 8;
-
-    // The keys and locks to place
-    keyType_t goals[] =
-    {
-        KEY_7,
-        KEY_6,
-        KEY_5,
-        KEY_4,
-        KEY_3,
-        KEY_2,
-        KEY_1,
-    };
-    int numKeys = sizeof(goals) / sizeof(goals[0]);
+    srand(time(NULL));
 
     // Create and connect dungeon
     dungeon_t dungeon;
@@ -52,51 +168,14 @@ int main(void)
     connectDungeonEllers(&dungeon);
 
     // Place the start
-    coord_t startRoom = {.x = width / 2, .y = height - 1};
+    coord_t startRoom = {
+        .x = width / 2,
+        .y = height - 1,
+    };
     dungeon.rooms[startRoom.x][startRoom.y].isStart = true;
 
-    // Place locks by partitioning the dungeon into roughly equal size chunks
-    for(uint8_t i = 0; i < numKeys; i++)
-    {
-        // Figure out how many rooms are behind each door
-        countRoomsAfterDoors(&dungeon, startRoom.x, startRoom.y);
-
-        // Each partition in the dungeon should be about this size
-        int tpSize = (dungeon.rooms[startRoom.x][startRoom.y].numChildren + 1) /
-                    (numKeys + 1 - i);
-
-        // Find the door that best partitions the dungeon
-        int bestPartitionDiff = dungeon.w * dungeon.h + 1;
-        door_t * bestDoor = NULL;
-        for(int d = 0; d < dungeon.numDoors; d++)
-        {
-            door_t* door = &dungeon.doors[d];
-            // Try to get this as close to zero as we can
-            int partitionDiff = ABS(tpSize - door->numChildren);
-            if(partitionDiff < bestPartitionDiff)
-            {
-                bestPartitionDiff = partitionDiff;
-                bestDoor = door;
-            }
-        }
-
-        // Lock the door
-        bestDoor->lock = goals[i];
-
-        // Find the room after the lock
-        room_t * roomAfterLock;
-        if(bestDoor->rooms[0]->numChildren < bestDoor->numChildren)
-        {
-            roomAfterLock = bestDoor->rooms[0];
-        }
-        else
-        {
-            roomAfterLock = bestDoor->rooms[1];
-        }
-
-        // Mark the partiton of all rooms after the lock
-        setPartitions(&dungeon, roomAfterLock, goals[i]);
-    }
+    // Place locks to partition the dungeon
+    placeLocks(&dungeon, goals, numKeys, startRoom);
 
     // Mark dead ends
     markDeadEnds(&dungeon);
@@ -105,31 +184,17 @@ int main(void)
     placeKeys(&dungeon, goals, numKeys);
 
     // Mark the end, which is the furthest room in the last partition
-    clearDungeonDists(&dungeon);
-    addDistFromRoom(&dungeon, startRoom.x, startRoom.y, true);
-    int greatestDist = 0;
-    coord_t end = {.x = 0, .y = 0};
-    for(int y = 0; y < dungeon.h; y++)
-    {
-        for(int x = 0; x < dungeon.w; x++)
-        {
-            if(dungeon.rooms[x][y].partition == goals[0])
-            {
-                if(dungeon.rooms[x][y].dist > greatestDist)
-                {
-                    greatestDist = dungeon.rooms[x][y].dist;
-                    end.x = x;
-                    end.y = y;
-                }
-            }
-        }
-    }
-    dungeon.rooms[end.x][end.y].isEnd = true;
+    markEnd(&dungeon, startRoom, goals[numKeys - 1]);
 
     // Save the image
     saveDungeonPng(&dungeon);
 
+    // Save as RMD
+    saveDungeonRmd(&dungeon);
+
     // Free everything
     freeDungeon(&dungeon);
-    return 0;
+
+    // Exit
+    exit(EXIT_SUCCESS);
 }

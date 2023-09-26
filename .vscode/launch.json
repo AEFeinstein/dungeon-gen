@@ -9,7 +9,7 @@
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/dungeon-gen",
-            "args": [],
+            "args": ["-w", "8", "-h", "4", "-k", "cmixlwk"],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
             "environment": [],

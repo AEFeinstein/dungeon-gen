@@ -54,3 +54,4 @@ dkms.conf
 # Generated files
 *.png
 dungeon-gen*
+*.rmd
