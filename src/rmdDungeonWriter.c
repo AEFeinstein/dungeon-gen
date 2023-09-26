@@ -22,6 +22,13 @@ typedef struct
     rayMapCellType_t key;
 } rayPair_t;
 
+typedef struct
+{
+    doorIdx door;
+    int xDoor;
+    int yDoor;
+} doorCheck_t;
+
 //==============================================================================
 // Constant data
 //==============================================================================
@@ -67,6 +74,29 @@ const rayPair_t rayPairs[] = {
         // KEY_7 -> KEY_16
         .door = BG_DOOR_KEY,
         .key  = OBJ_ITEM_KEY,
+    },
+};
+
+doorCheck_t dc[] = {
+    {
+        .door  = DOOR_UP,
+        .xDoor = RMD_ROOM_SIZE / 2,
+        .yDoor = 0,
+    },
+    {
+        .door  = DOOR_DOWN,
+        .xDoor = RMD_ROOM_SIZE / 2,
+        .yDoor = RMD_ROOM_SIZE - 1,
+    },
+    {
+        .door  = DOOR_LEFT,
+        .xDoor = 0,
+        .yDoor = RMD_ROOM_SIZE / 2,
+    },
+    {
+        .door  = DOOR_RIGHT,
+        .xDoor = RMD_ROOM_SIZE - 1,
+        .yDoor = RMD_ROOM_SIZE / 2,
     },
 };
 
@@ -133,32 +163,73 @@ void saveDungeonRmd(dungeon_t* dungeon)
                     if ((roomX == 0) || (roomX == (RMD_ROOM_SIZE - 1)) || (roomY == 0)
                         || (roomY == (RMD_ROOM_SIZE - 1)))
                     {
-                        if (dungeon->rooms[x][y].doors[DOOR_UP] && dungeon->rooms[x][y].doors[DOOR_UP]->isDoor
-                            && (0 == roomY && RMD_ROOM_SIZE / 2 == roomX)) // up
+                        bool doorPlaced = false;
+                        for (int d = 0; d < (int)(sizeof(dc) / sizeof(dc[0])); d++)
                         {
-                            fputc(keyTypeToRayType(dungeon->rooms[x][y].doors[DOOR_UP]->lock, true), file);
+                            if (dungeon->rooms[x][y].doors[dc[d].door] &&         //
+                                dungeon->rooms[x][y].doors[dc[d].door]->isDoor && //
+                                ((dc[d].yDoor == roomY) &&                        //
+                                 (dc[d].xDoor == roomX)))
+                            {
+                                fputc(keyTypeToRayType(dungeon->rooms[x][y].doors[dc[d].door]->lock, true), file);
+                                doorPlaced = true;
+                                break;
+                            }
                         }
-                        else if (dungeon->rooms[x][y].doors[DOOR_DOWN] && dungeon->rooms[x][y].doors[DOOR_DOWN]->isDoor
-                                 && (RMD_ROOM_SIZE - 1 == roomY && RMD_ROOM_SIZE / 2 == roomX)) // down
+
+                        // If a door wasn't placed
+                        if (!doorPlaced)
                         {
-                            fputc(keyTypeToRayType(dungeon->rooms[x][y].doors[DOOR_DOWN]->lock, true), file);
+                            // If an adjacent cell is part of the same partition, don't draw a wall there
+                            bool adjacentIsSamePartition = false;
+
+                            // Left wall
+                            if ((0 == roomX) &&                                   //
+                                ((0 < roomY) && (roomY < (RMD_ROOM_SIZE - 1))) && //
+                                (x > 0) &&                                        //
+                                (dungeon->rooms[x - 1][y].partition == dungeon->rooms[x][y].partition))
+                            {
+                                adjacentIsSamePartition = true;
+                            }
+                            // Right wall
+                            if (((RMD_ROOM_SIZE - 1) == roomX) &&                 //
+                                ((0 < roomY) && (roomY < (RMD_ROOM_SIZE - 1))) && //
+                                (x < (dungeon->w - 1)) &&                         //
+                                (dungeon->rooms[x + 1][y].partition == dungeon->rooms[x][y].partition))
+                            {
+                                adjacentIsSamePartition = true;
+                            }
+
+                            // Top wall
+                            if ((0 == roomY) &&                                   //
+                                ((0 < roomX) && (roomX < (RMD_ROOM_SIZE - 1))) && //
+                                (y > 0) &&                                        //
+                                (dungeon->rooms[x][y - 1].partition == dungeon->rooms[x][y].partition))
+                            {
+                                adjacentIsSamePartition = true;
+                            }
+                            // Bottom wall
+                            if (((RMD_ROOM_SIZE - 1) == roomY) &&                 //
+                                ((0 < roomX) && (roomX < (RMD_ROOM_SIZE - 1))) && //
+                                (y < (dungeon->h - 1)) &&                         //
+                                (dungeon->rooms[x][y + 1].partition == dungeon->rooms[x][y].partition))
+                            {
+                                adjacentIsSamePartition = true;
+                            }
+
+                            // If adjacent cells are the same partition
+                            if (adjacentIsSamePartition)
+                            {
+                                // Put floor
+                                fputc(BG_FLOOR, file);
+                            }
+                            else
+                            {
+                                // Put a wall, style based on partition
+                                fputc(BG_WALL_1 + (dungeon->rooms[x][y].partition % (BG_WALL_5 - BG_WALL_1 + 1)), file);
+                            }
                         }
-                        else if (dungeon->rooms[x][y].doors[DOOR_LEFT] && dungeon->rooms[x][y].doors[DOOR_LEFT]->isDoor
-                                 && (0 == roomX && RMD_ROOM_SIZE / 2 == roomY)) // left
-                        {
-                            fputc(keyTypeToRayType(dungeon->rooms[x][y].doors[DOOR_LEFT]->lock, true), file);
-                        }
-                        else if (dungeon->rooms[x][y].doors[DOOR_RIGHT]
-                                 && dungeon->rooms[x][y].doors[DOOR_RIGHT]->isDoor
-                                 && (RMD_ROOM_SIZE - 1 == roomX && RMD_ROOM_SIZE / 2 == roomY)) // right
-                        {
-                            fputc(keyTypeToRayType(dungeon->rooms[x][y].doors[DOOR_RIGHT]->lock, true), file);
-                        }
-                        else
-                        {
-                            // Put a wall
-                            fputc(BG_WALL_1, file);
-                        }
+
                         // No object on this tile
                         fputc(EMPTY, file);
                     }
