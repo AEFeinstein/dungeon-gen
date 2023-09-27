@@ -29,7 +29,7 @@
  */
 void printAndExit(char* progName)
 {
-    fprintf(stderr, "Usage: %s [-w width] [-h height] [-k key_string]\n", progName);
+    fprintf(stderr, "Usage: %s [-w width] [-h height] [-s room_size][-k key_string] [-c carve_walls]\n", progName);
     fprintf(stderr, "    key_string represents the type and order of keys placed in the map.\n");
     fprintf(stderr, "    key_string may not contain duplicate chars.\n");
     fprintf(stderr, "    key_string is a list of the following chars.\n");
@@ -53,14 +53,16 @@ void printAndExit(char* progName)
 int main(int argc, char** argv)
 {
     // Dungeon size
-    int width  = 0;
-    int height = 0;
+    int width       = 0;
+    int height      = 0;
+    int roomSize    = 0;
+    bool carveWalls = false;
     // Key type and order
     char* keyStr = NULL;
 
     // Read arguments
     int opt;
-    while ((opt = getopt(argc, argv, "w:h:k:")) != -1)
+    while ((opt = getopt(argc, argv, "w:h:s:k:c")) != -1)
     {
         switch (opt)
         {
@@ -74,9 +76,19 @@ int main(int argc, char** argv)
                 height = atoi(optarg);
                 break;
             }
+            case 's':
+            {
+                roomSize = atoi(optarg);
+                break;
+            }
             case 'k':
             {
                 keyStr = optarg;
+                break;
+            }
+            case 'c':
+            {
+                carveWalls = true;
                 break;
             }
             default:
@@ -87,7 +99,7 @@ int main(int argc, char** argv)
     }
 
     // Make sure all arguments are supplied
-    if (0 == width || 0 == height || NULL == keyStr)
+    if (0 == width || 0 == height || 0 == roomSize || NULL == keyStr)
     {
         printAndExit(argv[0]);
     }
@@ -190,7 +202,7 @@ int main(int argc, char** argv)
     saveDungeonPng(&dungeon);
 
     // Save as RMD
-    saveDungeonRmd(&dungeon);
+    saveDungeonRmd(&dungeon, roomSize, carveWalls);
 
     // Free everything
     freeDungeon(&dungeon);
