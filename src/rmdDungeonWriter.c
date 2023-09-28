@@ -36,38 +36,53 @@ const rayPair_t rayPairs[] = {
     },
     {
         // KEY_1
+        .door = BG_DOOR,
+        .key  = OBJ_ITEM_BEAM,
+    },
+    {
+        // KEY_2
         .door = BG_DOOR_CHARGE,
         .key  = OBJ_ITEM_CHARGE_BEAM,
     },
     {
-        // KEY_2
+        // KEY_3
         .door = BG_DOOR_MISSILE,
         .key  = OBJ_ITEM_MISSILE,
     },
     {
-        // KEY_3
+        // KEY_4
         .door = BG_FLOOR_LAVA,
         .key  = OBJ_ITEM_SUIT_LAVA,
     },
     {
-        // KEY_4
+        // KEY_5
         .door = BG_DOOR_ICE,
         .key  = OBJ_ITEM_ICE,
     },
     {
-        // KEY_5
+        // KEY_6
         .door = BG_FLOOR_WATER,
         .key  = OBJ_ITEM_SUIT_WATER,
     },
     {
-        // KEY_6
+        // KEY_7
         .door = BG_DOOR_XRAY,
         .key  = OBJ_ITEM_XRAY,
     },
     {
-        // KEY_7 -> KEY_16
-        .door = BG_DOOR_KEY,
-        .key  = OBJ_ITEM_KEY,
+        // KEY_8
+        .door = BG_DOOR_KEY_A,
+        .key  = OBJ_ITEM_KEY_A,
+    },
+    {
+        // KEY_9
+        .door = BG_DOOR_KEY_B,
+        .key  = OBJ_ITEM_KEY_B,
+    },
+    {
+        // KEY_10
+        .door = BG_DOOR_KEY_C,
+        .key  = OBJ_ITEM_KEY_C,
     },
 };
 

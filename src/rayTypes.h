@@ -48,7 +48,9 @@ typedef enum __attribute__((packed))
     BG_DOOR_ICE     = (BG | DOOR | 4),
     BG_DOOR_XRAY    = (BG | DOOR | 5),
     BG_DOOR_SCRIPT  = (BG | DOOR | 6),
-    BG_DOOR_KEY     = (BG | DOOR | 7),
+    BG_DOOR_KEY_A   = (BG | DOOR | 7),
+    BG_DOOR_KEY_B   = (BG | DOOR | 8),
+    BG_DOOR_KEY_C   = (BG | DOOR | 9),
     // Enemies
     OBJ_ENEMY_START_POINT = (OBJ | ENEMY | 1),
     OBJ_ENEMY_NORMAL      = (OBJ | ENEMY | 2),
@@ -67,17 +69,20 @@ typedef enum __attribute__((packed))
     OBJ_ITEM_SUIT_LAVA   = (OBJ | ITEM | 7),
     OBJ_ITEM_ENERGY_TANK = (OBJ | ITEM | 8),
     // Permanent non-power-items
-    OBJ_ITEM_KEY      = (OBJ | ITEM | 9),
-    OBJ_ITEM_ARTIFACT = (OBJ | ITEM | 10),
+    OBJ_ITEM_KEY_A    = (OBJ | ITEM | 9),
+    OBJ_ITEM_KEY_B    = (OBJ | ITEM | 10),
+    OBJ_ITEM_KEY_C    = (OBJ | ITEM | 11),
+    OBJ_ITEM_ARTIFACT = (OBJ | ITEM | 12),
     // Transient items
-    OBJ_ITEM_PICKUP_ENERGY  = (OBJ | ITEM | 11),
-    OBJ_ITEM_PICKUP_MISSILE = (OBJ | ITEM | 12),
+    OBJ_ITEM_PICKUP_ENERGY  = (OBJ | ITEM | 13),
+    OBJ_ITEM_PICKUP_MISSILE = (OBJ | ITEM | 14),
     // Bullets
-    OBJ_BULLET_NORMAL  = (OBJ | BULLET | 13),
-    OBJ_BULLET_CHARGE  = (OBJ | BULLET | 14),
-    OBJ_BULLET_ICE     = (OBJ | BULLET | 15),
-    OBJ_BULLET_MISSILE = (OBJ | BULLET | 16),
-    OBJ_BULLET_XRAY    = (OBJ | BULLET | 17),
+    OBJ_BULLET_NORMAL  = (OBJ | BULLET | 15),
+    OBJ_BULLET_CHARGE  = (OBJ | BULLET | 16),
+    OBJ_BULLET_ICE     = (OBJ | BULLET | 17),
+    OBJ_BULLET_MISSILE = (OBJ | BULLET | 18),
+    OBJ_BULLET_XRAY    = (OBJ | BULLET | 19),
     // Scenery
     OBJ_SCENERY_TERMINAL = (OBJ | SCENERY | 1),
+    OBJ_SCENERY_PORTAL   = (OBJ | SCENERY | 2),
 } rayMapCellType_t;

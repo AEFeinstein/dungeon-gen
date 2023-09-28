@@ -29,10 +29,11 @@
  */
 void printAndExit(char* progName)
 {
-    fprintf(stderr, "Usage: %s [-w width] [-h height] [-s room_size][-k key_string] [-c carve_walls]\n", progName);
+    fprintf(stderr, "Usage: %s [-w width] [-h height] [-s room_size] [-k key_string] [-c carve_walls]\n", progName);
     fprintf(stderr, "    key_string represents the type and order of keys placed in the map.\n");
     fprintf(stderr, "    key_string may not contain duplicate chars.\n");
     fprintf(stderr, "    key_string is a list of the following chars.\n");
+    fprintf(stderr, "        g   = gun\n");
     fprintf(stderr, "        c   = charge\n");
     fprintf(stderr, "        m   = missile\n");
     fprintf(stderr, "        i   = ice\n");
@@ -112,40 +113,46 @@ int main(int argc, char** argv)
         keyStr[kIdx] = tolower(keyStr[kIdx]);
         switch (keyStr[kIdx])
         {
+            case 'g':
+            {
+                // KEY_1 is beam
+                goals[kIdx] = KEY_1;
+                break;
+            }
             case 'c':
             {
                 // KEY_1 is charge beam
-                goals[kIdx] = KEY_1;
+                goals[kIdx] = KEY_2;
                 break;
             }
             case 'm':
             {
                 // KEY_2 is missiles
-                goals[kIdx] = KEY_2;
+                goals[kIdx] = KEY_3;
                 break;
             }
             case 'l':
             {
                 // KEY_3 is lava suit
-                goals[kIdx] = KEY_3;
+                goals[kIdx] = KEY_4;
                 break;
             }
             case 'i':
             {
                 // KEY_4 is ice beam
-                goals[kIdx] = KEY_4;
+                goals[kIdx] = KEY_5;
                 break;
             }
             case 'w':
             {
                 // KEY_5 is water suit
-                goals[kIdx] = KEY_5;
+                goals[kIdx] = KEY_6;
                 break;
             }
             case 'x':
             {
                 // KEY_6 is xray visor
-                goals[kIdx] = KEY_6;
+                goals[kIdx] = KEY_7;
                 break;
             }
             case '0':
@@ -159,8 +166,8 @@ int main(int argc, char** argv)
             case '8':
             case '9':
             {
-                // Numerals are KEY_7 through KEY_16
-                goals[kIdx] = KEY_7 + (keyStr[kIdx] - '0');
+                // Numerals are KEY_8 through KEY_17
+                goals[kIdx] = KEY_8 + (keyStr[kIdx] - '0');
                 break;
             }
             default:
