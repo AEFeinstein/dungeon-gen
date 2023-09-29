@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <string.h>
 
 #define STBI_ONLY_PNG
 #define STB_IMAGE_IMPLEMENTATION
@@ -16,8 +17,9 @@ static uint32_t roomColor(keyType_t type, bool isStart, bool isEnd, bool isDeadE
  * @brief Save a dungeon as a PNG image
  *
  * @param dungeon The dungeon to save
+ * @param name The name to save
  */
-void saveDungeonPng(dungeon_t* dungeon)
+void saveDungeonPng(dungeon_t* dungeon, char* name)
 {
     uint32_t* data = calloc(dungeon->w * dungeon->h * ROOM_SIZE * ROOM_SIZE, sizeof(uint32_t));
 
@@ -90,7 +92,9 @@ void saveDungeonPng(dungeon_t* dungeon)
         }
     }
 
-    stbi_write_png("rooms.png", dungeon->w * ROOM_SIZE, dungeon->h * ROOM_SIZE, 4, data, 4 * dungeon->w * ROOM_SIZE);
+    char nameWithSuffix[strlen(name) + 5];
+    snprintf(nameWithSuffix, sizeof(nameWithSuffix), "%s.png", name);
+    stbi_write_png(nameWithSuffix, dungeon->w * ROOM_SIZE, dungeon->h * ROOM_SIZE, 4, data, 4 * dungeon->w * ROOM_SIZE);
     free(data);
 }
 

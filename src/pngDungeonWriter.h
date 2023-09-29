@@ -2,4 +2,4 @@
 
 #include "dungeon.h"
 
-void saveDungeonPng(dungeon_t* dungeon);
+void saveDungeonPng(dungeon_t* dungeon, char* name);

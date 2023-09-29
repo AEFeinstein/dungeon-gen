@@ -3,6 +3,7 @@
 //==============================================================================
 
 #include <stdio.h>
+#include <string.h>
 #include "rmdDungeonWriter.h"
 #include "rayTypes.h"
 
@@ -135,8 +136,9 @@ static rayMapCellType_t keyTypeToRayType(keyType_t key, bool isDoor)
  * @param dungeon The dungeon to save
  * @param roomSize The number of cells for a side of a room. Must be at least 3
  * @param carveWalls true to carve out walls in a partition, false to leave them
+ * @param name The name to save
  */
-void saveDungeonRmd(dungeon_t* dungeon, int roomSize, bool carveWalls)
+void saveDungeonRmd(dungeon_t* dungeon, int roomSize, bool carveWalls, char* name)
 {
     // Make sure this is at least 3
     if (roomSize < 3)
@@ -170,7 +172,9 @@ void saveDungeonRmd(dungeon_t* dungeon, int roomSize, bool carveWalls)
 
     int objIdx = 0;
     // Open a file
-    FILE* file = fopen("dungeon.rmd", "wb");
+    char nameWithSuffix[strlen(name) + 5];
+    snprintf(nameWithSuffix, sizeof(nameWithSuffix), "%s.rmd", name);
+    FILE* file = fopen(nameWithSuffix, "wb");
     // Write dimensions
     fputc(dungeon->w * roomSize, file);
     fputc(dungeon->h * roomSize, file);
