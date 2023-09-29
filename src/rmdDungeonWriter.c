@@ -195,9 +195,14 @@ void saveDungeonRmd(dungeon_t* dungeon, int roomSize, bool carveWalls)
                                  (dc[d].xDoor == roomX)))
                             {
                                 keyType_t key = dungeon->rooms[x][y].doors[dc[d].door]->lock;
-                                if (EMPTY_ROOM == key)
+                                if ((EMPTY_ROOM == key)
+                                    || (dungeon->rooms[x][y].doors[DOOR_LEFT]
+                                        && (EMPTY_ROOM != dungeon->rooms[x][y].doors[DOOR_LEFT]->lock))
+                                    || (dungeon->rooms[x][y].doors[DOOR_UP]
+                                        && (EMPTY_ROOM != dungeon->rooms[x][y].doors[DOOR_UP]->lock)))
                                 {
-                                    // For empty rooms, place floor according to partition
+                                    // For empty rooms or if an adjacent door was already placed,
+                                    // place floor according to partition
                                     placeFloor(dungeon->rooms[x][y].partition, file);
                                 }
                                 else
