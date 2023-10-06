@@ -44,6 +44,14 @@ typedef enum
     KEY_16,
 } keyType_t;
 
+typedef enum
+{
+    TOP_LEFT,
+    TOP_RIGHT,
+    BOTTOM_LEFT,
+    BOTTOM_RIGHT,
+} startingRoom_t;
+
 //==============================================================================
 // Structs
 //==============================================================================

@@ -29,8 +29,11 @@
  */
 void printAndExit(char* progName)
 {
-    fprintf(stderr, "Usage: %s [-w width] [-h height] [-s room_size] [-k key_string] [-c carve_walls] [-n name]\n",
+    fprintf(stderr,
+            "Usage: %s [-w width] [-h height] [-r room_size] [-s starting_room] [-k key_string] [-c carve_walls] [-n "
+            "name]\n",
             progName);
+    fprintf(stderr, "    starting_room is one of TOP_LEFT, TOP_RIGHT, BOTTOM_LEFT, BOTTOM_RIGHT\n");
     fprintf(stderr, "    key_string represents the type and order of keys placed in the map.\n");
     fprintf(stderr, "    key_string may not contain duplicate chars.\n");
     fprintf(stderr, "    key_string is a list of the following chars.\n");
@@ -55,10 +58,11 @@ void printAndExit(char* progName)
 int main(int argc, char** argv)
 {
     // Dungeon size
-    int width       = 0;
-    int height      = 0;
-    int roomSize    = 0;
-    bool carveWalls = false;
+    int width                   = 0;
+    int height                  = 0;
+    int roomSize                = 0;
+    bool carveWalls             = false;
+    startingRoom_t startingRoom = TOP_LEFT;
     // Key type and order
     char* keyStr = NULL;
     // Save file name
@@ -66,7 +70,7 @@ int main(int argc, char** argv)
 
     // Read arguments
     int opt;
-    while ((opt = getopt(argc, argv, "w:h:s:k:cn:")) != -1)
+    while ((opt = getopt(argc, argv, "w:h:s:r:k:cn:")) != -1)
     {
         switch (opt)
         {
@@ -80,9 +84,33 @@ int main(int argc, char** argv)
                 height = atoi(optarg);
                 break;
             }
-            case 's':
+            case 'r':
             {
                 roomSize = atoi(optarg);
+                break;
+            }
+            case 's':
+            {
+                if (0 == strcmp(optarg, "TOP_LEFT"))
+                {
+                    startingRoom = TOP_LEFT;
+                }
+                else if (0 == strcmp(optarg, "TOP_RIGHT"))
+                {
+                    startingRoom = TOP_RIGHT;
+                }
+                else if (0 == strcmp(optarg, "BOTTOM_LEFT"))
+                {
+                    startingRoom = BOTTOM_LEFT;
+                }
+                else if (0 == strcmp(optarg, "BOTTOM_RIGHT"))
+                {
+                    startingRoom = BOTTOM_RIGHT;
+                }
+                else
+                {
+                    printAndExit(argv[0]);
+                }
                 break;
             }
             case 'k':
@@ -195,10 +223,35 @@ int main(int argc, char** argv)
     connectDungeonEllers(&dungeon);
 
     // Place the start
-    coord_t startRoom = {
-        .x = width / 2,
-        .y = height - 1,
-    };
+    coord_t startRoom;
+    switch (startingRoom)
+    {
+        default:
+        case TOP_LEFT:
+        {
+            startRoom.x = 0;
+            startRoom.y = 0;
+            break;
+        }
+        case TOP_RIGHT:
+        {
+            startRoom.x = width - 1;
+            startRoom.y = 0;
+            break;
+        }
+        case BOTTOM_LEFT:
+        {
+            startRoom.x = 0;
+            startRoom.y = height - 1;
+            break;
+        }
+        case BOTTOM_RIGHT:
+        {
+            startRoom.x = width - 1;
+            startRoom.y = height - 1;
+            break;
+        }
+    }
     dungeon.rooms[startRoom.x][startRoom.y].isStart = true;
 
     // Place locks to partition the dungeon

@@ -334,10 +334,10 @@ void saveDungeonRmd(dungeon_t* dungeon, int roomSize, bool carveWalls, char* nam
                             {
                                 itemType = OBJ_ITEM_ARTIFACT;
                             }
-                            else if (room->isDeadEnd)
-                            {
-                                itemType = OBJ_ITEM_PICKUP_ENERGY;
-                            }
+                            // else if (room->isDeadEnd)
+                            // {
+                            //     itemType = OBJ_ITEM_PICKUP_ENERGY;
+                            // }
 
                             fputc(itemType, file);
                             if (EMPTY != itemType)
