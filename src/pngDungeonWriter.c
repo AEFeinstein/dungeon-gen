@@ -160,7 +160,7 @@ static uint32_t roomColor(keyType_t type, bool isStart, bool isEnd, bool isDeadE
             case KEY_15:
             case KEY_16:
             {
-                return 0xFFBBBBBB;
+                return 0xFFBBBBBB; // TODO make unique
             }
         }
 
