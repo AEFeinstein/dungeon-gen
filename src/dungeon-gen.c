@@ -31,7 +31,7 @@
 void printAndExit(char* progName)
 {
     fprintf(stderr,
-            "Usage: %s [-w width] [-h height] [-r room_size] [-s starting_room] [-k key_string] [-c carve_walls] [-n "
+            "Usage: %s [-w width] [-h height] [-x room_width] [-y room_height] [-s starting_room] [-k key_string] [-c carve_walls] [-n "
             "name]\n",
             progName);
     fprintf(stderr, "    starting_room is one of TOP_LEFT, TOP_RIGHT, BOTTOM_LEFT, BOTTOM_RIGHT\n");
@@ -61,7 +61,8 @@ int main(int argc, char** argv)
     // Dungeon size
     int width                   = 0;
     int height                  = 0;
-    int roomSize                = 0;
+    int roomWidth               = 0;
+    int roomHeight              = 0;
     bool carveWalls             = false;
     startingRoom_t startingRoom = TOP_LEFT;
     // Key type and order
@@ -71,7 +72,7 @@ int main(int argc, char** argv)
 
     // Read arguments
     int opt;
-    while ((opt = getopt(argc, argv, "w:h:s:r:k:cn:")) != -1)
+    while ((opt = getopt(argc, argv, "w:h:s:x:y:k:cn:")) != -1)
     {
         switch (opt)
         {
@@ -85,9 +86,14 @@ int main(int argc, char** argv)
                 height = atoi(optarg);
                 break;
             }
-            case 'r':
+            case 'x':
             {
-                roomSize = atoi(optarg);
+                roomWidth = atoi(optarg);
+                break;
+            }
+            case 'y':
+            {
+                roomHeight = atoi(optarg);
                 break;
             }
             case 's':
@@ -137,7 +143,7 @@ int main(int argc, char** argv)
     }
 
     // Make sure all arguments are supplied
-    if (0 == width || 0 == height || 0 == roomSize || NULL == keyStr || NULL == name)
+    if (0 == width || 0 == height || 0 == roomWidth || 0 == roomHeight || NULL == keyStr || NULL == name)
     {
         printAndExit(argv[0]);
     }
@@ -271,7 +277,7 @@ int main(int argc, char** argv)
     saveDungeonPng(&dungeon, name);
 
     // Save as RMD
-    saveDungeonRmd(&dungeon, roomSize, carveWalls, name);
+    saveDungeonRmd(&dungeon, roomWidth, roomHeight, carveWalls, name);
 
     // Free everything
     freeDungeon(&dungeon);

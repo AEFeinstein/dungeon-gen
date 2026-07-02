@@ -2,4 +2,4 @@
 
 #include "dungeon.h"
 
-void saveDungeonRmd(dungeon_t* dungeon, int roomSize, bool carveWalls, char* name);
+void saveDungeonRmd(dungeon_t* dungeon, int roomWidth, int roomHeight, bool carveWalls, const char* name);

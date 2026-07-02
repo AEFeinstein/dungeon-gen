@@ -134,39 +134,45 @@ static rayMapCellType_t keyTypeToRayType(keyType_t key, bool isDoor)
  * @brief Save a dungeon as an RMD file
  *
  * @param dungeon The dungeon to save
- * @param roomSize The number of cells for a side of a room. Must be at least 3
+ * @param roomWidth The number of cells for the width of a room. Must be at least 3
+ * @param roomHeight The number of cells for the height of a room. Must be at least 3
  * @param carveWalls true to carve out walls in a partition, false to leave them
  * @param name The name to save
  */
-void saveDungeonRmd(dungeon_t* dungeon, int roomSize, bool carveWalls, char* name)
+void saveDungeonRmd(dungeon_t* dungeon, int roomWidth, int roomHeight, bool carveWalls, const char* name)
 {
     // Make sure this is at least 3
-    if (roomSize < 3)
+    if (roomWidth < 3)
     {
-        roomSize = 3;
+        roomWidth = 3;
+    }
+
+    if (roomHeight < 3)
+    {
+        roomHeight = 3;
     }
 
     // Array to check doors easier
     doorCheck_t dc[] = {
         {
             .door  = DOOR_UP,
-            .xDoor = roomSize / 2,
+            .xDoor = roomWidth / 2,
             .yDoor = 0,
         },
         {
             .door  = DOOR_DOWN,
-            .xDoor = roomSize / 2,
-            .yDoor = roomSize - 1,
+            .xDoor = roomWidth / 2,
+            .yDoor = roomHeight - 1,
         },
         {
             .door  = DOOR_LEFT,
             .xDoor = 0,
-            .yDoor = roomSize / 2,
+            .yDoor = roomHeight / 2,
         },
         {
             .door  = DOOR_RIGHT,
-            .xDoor = roomSize - 1,
-            .yDoor = roomSize / 2,
+            .xDoor = roomWidth - 1,
+            .yDoor = roomHeight / 2,
         },
     };
 
@@ -175,20 +181,25 @@ void saveDungeonRmd(dungeon_t* dungeon, int roomSize, bool carveWalls, char* nam
     char nameWithSuffix[strlen(name) + 5];
     snprintf(nameWithSuffix, sizeof(nameWithSuffix), "%s.rmd", name);
     FILE* file = fopen(nameWithSuffix, "wb");
+    if(NULL == file)
+    {
+        fprintf(stderr, "Couldn't open %s for writing!\n", nameWithSuffix);
+        return;
+    }
     // Write dimensions
-    fputc(dungeon->w * roomSize, file);
-    fputc(dungeon->h * roomSize, file);
+    fputc(dungeon->w * roomWidth, file);
+    fputc(dungeon->h * roomHeight, file);
 
     for (int y = 0; y < dungeon->h; y++)
     {
-        for (int roomY = 0; roomY < roomSize; roomY++)
+        for (int roomY = 0; roomY < roomHeight; roomY++)
         {
             for (int x = 0; x < dungeon->w; x++)
             {
-                for (int roomX = 0; roomX < roomSize; roomX++)
+                for (int roomX = 0; roomX < roomWidth; roomX++)
                 {
                     // If this is a boundary
-                    if ((roomX == 0) || (roomX == (roomSize - 1)) || (roomY == 0) || (roomY == (roomSize - 1)))
+                    if ((roomX == 0) || (roomX == (roomWidth - 1)) || (roomY == 0) || (roomY == (roomHeight - 1)))
                     {
                         bool doorPlaced = false;
                         for (int d = 0; d < (int)(sizeof(dc) / sizeof(dc[0])); d++)
@@ -229,15 +240,15 @@ void saveDungeonRmd(dungeon_t* dungeon, int roomSize, bool carveWalls, char* nam
                             {
                                 // Left wall
                                 if ((0 == roomX) &&                              //
-                                    ((0 < roomY) && (roomY < (roomSize - 1))) && //
+                                    ((0 < roomY) && (roomY < (roomHeight - 1))) && //
                                     (x > 0) &&                                   //
                                     (dungeon->rooms[x - 1][y].partition == dungeon->rooms[x][y].partition))
                                 {
                                     adjacentIsSamePartition = true;
                                 }
                                 // Right wall
-                                if (((roomSize - 1) == roomX) &&                 //
-                                    ((0 < roomY) && (roomY < (roomSize - 1))) && //
+                                if (((roomWidth - 1) == roomX) &&                 //
+                                    ((0 < roomY) && (roomY < (roomHeight - 1))) && //
                                     (x < (dungeon->w - 1)) &&                    //
                                     (dungeon->rooms[x + 1][y].partition == dungeon->rooms[x][y].partition))
                                 {
@@ -246,15 +257,15 @@ void saveDungeonRmd(dungeon_t* dungeon, int roomSize, bool carveWalls, char* nam
 
                                 // Top wall
                                 if ((0 == roomY) &&                              //
-                                    ((0 < roomX) && (roomX < (roomSize - 1))) && //
+                                    ((0 < roomX) && (roomX < (roomWidth - 1))) && //
                                     (y > 0) &&                                   //
                                     (dungeon->rooms[x][y - 1].partition == dungeon->rooms[x][y].partition))
                                 {
                                     adjacentIsSamePartition = true;
                                 }
                                 // Bottom wall
-                                if (((roomSize - 1) == roomY) &&                 //
-                                    ((0 < roomX) && (roomX < (roomSize - 1))) && //
+                                if (((roomHeight - 1) == roomY) &&                 //
+                                    ((0 < roomX) && (roomX < (roomWidth - 1))) && //
                                     (y < (dungeon->h - 1)) &&                    //
                                     (dungeon->rooms[x][y + 1].partition == dungeon->rooms[x][y].partition))
                                 {
@@ -270,7 +281,7 @@ void saveDungeonRmd(dungeon_t* dungeon, int roomSize, bool carveWalls, char* nam
                                     adjacentIsSamePartition = true;
                                 }
                                 // Bottom Left
-                                if ((0 == roomX && (roomSize - 1) == roomY) &&                              //
+                                if ((0 == roomX && (roomHeight - 1) == roomY) &&                              //
                                     (x > 0 && y < (dungeon->h - 1)) &&                                      //
                                     dungeon->rooms[x][y].partition == dungeon->rooms[x - 1][y].partition && //
                                     dungeon->rooms[x][y].partition == dungeon->rooms[x][y + 1].partition)
@@ -279,7 +290,7 @@ void saveDungeonRmd(dungeon_t* dungeon, int roomSize, bool carveWalls, char* nam
                                 }
 
                                 // Top Right
-                                if (((roomSize - 1) == roomX && 0 == roomY) &&                              //
+                                if (((roomWidth - 1) == roomX && 0 == roomY) &&                              //
                                     (x < (dungeon->w - 1) && y > 0) &&                                      //
                                     dungeon->rooms[x][y].partition == dungeon->rooms[x + 1][y].partition && //
                                     dungeon->rooms[x][y].partition == dungeon->rooms[x][y - 1].partition)
@@ -287,7 +298,7 @@ void saveDungeonRmd(dungeon_t* dungeon, int roomSize, bool carveWalls, char* nam
                                     adjacentIsSamePartition = true;
                                 }
                                 // Bottom Right
-                                if (((roomSize - 1) == roomX && (roomSize - 1) == roomY) &&                 //
+                                if (((roomWidth - 1) == roomX && (roomHeight - 1) == roomY) &&                 //
                                     (x < (dungeon->w - 1) && y < (dungeon->h - 1)) &&                       //
                                     dungeon->rooms[x][y].partition == dungeon->rooms[x + 1][y].partition && //
                                     dungeon->rooms[x][y].partition == dungeon->rooms[x][y + 1].partition)
@@ -318,7 +329,7 @@ void saveDungeonRmd(dungeon_t* dungeon, int roomSize, bool carveWalls, char* nam
                         placeFloor(dungeon->rooms[x][y].partition, file);
 
                         // Place an object, maybe
-                        if ((roomX == roomSize / 2) && (roomY == roomSize / 2))
+                        if ((roomX == roomWidth / 2) && (roomY == roomHeight / 2))
                         {
                             rayMapCellType_t itemType = EMPTY;
                             room_t* room              = &dungeon->rooms[x][y];

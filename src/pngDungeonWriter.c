@@ -19,7 +19,7 @@ static uint32_t roomColor(keyType_t type, bool isStart, bool isEnd, bool isDeadE
  * @param dungeon The dungeon to save
  * @param name The name to save
  */
-void saveDungeonPng(dungeon_t* dungeon, char* name)
+void saveDungeonPng(dungeon_t* dungeon, const char* name)
 {
     uint32_t* data = calloc(dungeon->w * dungeon->h * ROOM_SIZE * ROOM_SIZE, sizeof(uint32_t));
 
