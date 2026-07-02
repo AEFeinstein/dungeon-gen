@@ -31,7 +31,8 @@
 void printAndExit(char* progName)
 {
     fprintf(stderr,
-            "Usage: %s [-w width] [-h height] [-x room_width] [-y room_height] [-s starting_room] [-k key_string] [-c carve_walls] [-n "
+            "Usage: %s [-w width] [-h height] [-x room_width] [-y room_height] [-s starting_room] [-k key_string] [-c "
+            "carve_walls] [-n "
             "name]\n",
             progName);
     fprintf(stderr, "    starting_room is one of TOP_LEFT, TOP_RIGHT, BOTTOM_LEFT, BOTTOM_RIGHT\n");

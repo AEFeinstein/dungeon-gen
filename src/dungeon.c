@@ -779,8 +779,8 @@ void markEnd(dungeon_t* dungeon, coord_t startRoom, keyType_t finalPartition)
     addDistFromRoom(dungeon, startRoom.x, startRoom.y, true);
     int greatestDist = 0;
     coord_t end      = {
-             .x = 0,
-             .y = 0,
+        .x = 0,
+        .y = 0,
     };
     for (int y = 0; y < dungeon->h; y++)
     {

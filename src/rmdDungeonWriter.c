@@ -181,7 +181,7 @@ void saveDungeonRmd(dungeon_t* dungeon, int roomWidth, int roomHeight, bool carv
     char nameWithSuffix[strlen(name) + 5];
     snprintf(nameWithSuffix, sizeof(nameWithSuffix), "%s.rmd", name);
     FILE* file = fopen(nameWithSuffix, "wb");
-    if(NULL == file)
+    if (NULL == file)
     {
         fprintf(stderr, "Couldn't open %s for writing!\n", nameWithSuffix);
         return;
@@ -239,34 +239,34 @@ void saveDungeonRmd(dungeon_t* dungeon, int roomWidth, int roomHeight, bool carv
                             if (carveWalls)
                             {
                                 // Left wall
-                                if ((0 == roomX) &&                              //
+                                if ((0 == roomX) &&                                //
                                     ((0 < roomY) && (roomY < (roomHeight - 1))) && //
-                                    (x > 0) &&                                   //
+                                    (x > 0) &&                                     //
                                     (dungeon->rooms[x - 1][y].partition == dungeon->rooms[x][y].partition))
                                 {
                                     adjacentIsSamePartition = true;
                                 }
                                 // Right wall
-                                if (((roomWidth - 1) == roomX) &&                 //
+                                if (((roomWidth - 1) == roomX) &&                  //
                                     ((0 < roomY) && (roomY < (roomHeight - 1))) && //
-                                    (x < (dungeon->w - 1)) &&                    //
+                                    (x < (dungeon->w - 1)) &&                      //
                                     (dungeon->rooms[x + 1][y].partition == dungeon->rooms[x][y].partition))
                                 {
                                     adjacentIsSamePartition = true;
                                 }
 
                                 // Top wall
-                                if ((0 == roomY) &&                              //
+                                if ((0 == roomY) &&                               //
                                     ((0 < roomX) && (roomX < (roomWidth - 1))) && //
-                                    (y > 0) &&                                   //
+                                    (y > 0) &&                                    //
                                     (dungeon->rooms[x][y - 1].partition == dungeon->rooms[x][y].partition))
                                 {
                                     adjacentIsSamePartition = true;
                                 }
                                 // Bottom wall
-                                if (((roomHeight - 1) == roomY) &&                 //
+                                if (((roomHeight - 1) == roomY) &&                //
                                     ((0 < roomX) && (roomX < (roomWidth - 1))) && //
-                                    (y < (dungeon->h - 1)) &&                    //
+                                    (y < (dungeon->h - 1)) &&                     //
                                     (dungeon->rooms[x][y + 1].partition == dungeon->rooms[x][y].partition))
                                 {
                                     adjacentIsSamePartition = true;
@@ -281,7 +281,7 @@ void saveDungeonRmd(dungeon_t* dungeon, int roomWidth, int roomHeight, bool carv
                                     adjacentIsSamePartition = true;
                                 }
                                 // Bottom Left
-                                if ((0 == roomX && (roomHeight - 1) == roomY) &&                              //
+                                if ((0 == roomX && (roomHeight - 1) == roomY) &&                            //
                                     (x > 0 && y < (dungeon->h - 1)) &&                                      //
                                     dungeon->rooms[x][y].partition == dungeon->rooms[x - 1][y].partition && //
                                     dungeon->rooms[x][y].partition == dungeon->rooms[x][y + 1].partition)
@@ -290,7 +290,7 @@ void saveDungeonRmd(dungeon_t* dungeon, int roomWidth, int roomHeight, bool carv
                                 }
 
                                 // Top Right
-                                if (((roomWidth - 1) == roomX && 0 == roomY) &&                              //
+                                if (((roomWidth - 1) == roomX && 0 == roomY) &&                             //
                                     (x < (dungeon->w - 1) && y > 0) &&                                      //
                                     dungeon->rooms[x][y].partition == dungeon->rooms[x + 1][y].partition && //
                                     dungeon->rooms[x][y].partition == dungeon->rooms[x][y - 1].partition)
@@ -298,7 +298,7 @@ void saveDungeonRmd(dungeon_t* dungeon, int roomWidth, int roomHeight, bool carv
                                     adjacentIsSamePartition = true;
                                 }
                                 // Bottom Right
-                                if (((roomWidth - 1) == roomX && (roomHeight - 1) == roomY) &&                 //
+                                if (((roomWidth - 1) == roomX && (roomHeight - 1) == roomY) &&              //
                                     (x < (dungeon->w - 1) && y < (dungeon->h - 1)) &&                       //
                                     dungeon->rooms[x][y].partition == dungeon->rooms[x + 1][y].partition && //
                                     dungeon->rooms[x][y].partition == dungeon->rooms[x][y + 1].partition)

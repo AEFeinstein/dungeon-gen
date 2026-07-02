@@ -7,4 +7,4 @@ clean:
 	rm -rf dungeon-gen
 
 format:
-	clang-format -i -style=file ./src/dungeon-gen.c ./src/dungeon.c ./src/dungeon.h ./src/linked_list.c ./src/linked_list.h ./src/pngDungeonWriter.c ./src/pngDungeonWriter.h ./src/rayTypes.h ./src/rmdDungeonWriter.c ./src/rmdDungeonWriter.h 
+	clang-format-22 -i -style=file ./src/dungeon-gen.c ./src/dungeon.c ./src/dungeon.h ./src/linked_list.c ./src/linked_list.h ./src/pngDungeonWriter.c ./src/pngDungeonWriter.h ./src/rayTypes.h ./src/rmdDungeonWriter.c ./src/rmdDungeonWriter.h 
