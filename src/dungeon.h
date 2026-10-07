@@ -26,19 +26,13 @@ typedef enum
 typedef enum
 {
     EMPTY_ROOM,
-    KEY_1,
-    KEY_2,
-    KEY_3,
-    KEY_4,
-    KEY_5,
-    KEY_6,
-    KEY_7,
-    KEY_8,
-    KEY_9,
-    KEY_10,
-    KEY_11,
-    KEY_12,
-    KEY_13,
+    KEY_1, ///< Shield
+    KEY_2, ///< Boomerang
+    KEY_3, ///< Lullaby
+    KEY_4, ///< R Key
+    KEY_5, ///< G Key
+    KEY_6, ///< B Key
+    KEY_7, ///< K Key
 } keyType_t;
 
 typedef enum

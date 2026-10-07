@@ -315,12 +315,6 @@ bool isLocked(door_t* door)
         case KEY_5:
         case KEY_6:
         case KEY_7:
-        case KEY_8:
-        case KEY_9:
-        case KEY_10:
-        case KEY_11:
-        case KEY_12:
-        case KEY_13:
         {
             return true;
         }

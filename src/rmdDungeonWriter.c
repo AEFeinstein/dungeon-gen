@@ -51,9 +51,24 @@ const rayPair_t rayPairs[] = {
         .key  = OBJ_ITEM_LULLABY,
     },
     {
-        // KEY_4 thru KEY_13
-        .door = BG_DOOR_KEY_LOCKED,
-        .key  = OBJ_ITEM_KEY,
+        // KEY_4
+        .door = BG_DOOR_R_KEY_LOCKED,
+        .key  = OBJ_ITEM_R_KEY,
+    },
+    {
+        // KEY_5
+        .door = BG_DOOR_G_KEY_LOCKED,
+        .key  = OBJ_ITEM_G_KEY,
+    },
+    {
+        // KEY_6
+        .door = BG_DOOR_B_KEY_LOCKED,
+        .key  = OBJ_ITEM_B_KEY,
+    },
+    {
+        // KEY_7
+        .door = BG_DOOR_K_KEY_LOCKED,
+        .key  = OBJ_ITEM_K_KEY,
     },
 };
 
@@ -166,6 +181,7 @@ void saveDungeonRmd(dungeon_t* dungeon, int roomWidth, int roomHeight, bool carv
         {
             for (int x = 0; x < dungeon->w; x++)
             {
+                printf("Room (%02d, %02d)\n", x, y);
                 for (int roomX = 0; roomX < roomWidth; roomX++)
                 {
                     // If this is a boundary
