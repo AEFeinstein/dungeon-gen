@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 
 ROOM_W=14
 ROOM_H=12

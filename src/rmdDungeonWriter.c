@@ -3,9 +3,11 @@
 //==============================================================================
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include "rmdDungeonWriter.h"
 #include "rayTypes.h"
+#include "linked_list.h"
 
 //==============================================================================
 // Structs
@@ -23,6 +25,19 @@ typedef struct
     int xDoor;
     int yDoor;
 } doorCheck_t;
+
+typedef struct
+{
+    uint8_t x;
+    uint8_t y;
+} cell_t;
+
+typedef struct
+{
+    cell_t cam;
+    cell_t doors[4];
+    uint32_t numDoors;
+} doorScript_t;
 
 //==============================================================================
 // Constant data
@@ -175,13 +190,16 @@ void saveDungeonRmd(dungeon_t* dungeon, int roomWidth, int roomHeight, bool carv
     fputc(dungeon->w * roomWidth, file);
     fputc(dungeon->h * roomHeight, file);
 
+    // Set up door scripts
+    doorScript_t doorScripts[dungeon->w][dungeon->h];
+    memset(doorScripts, 0, sizeof(doorScripts));
+
     for (int y = 0; y < dungeon->h; y++)
     {
         for (int roomY = 0; roomY < roomHeight; roomY++)
         {
             for (int x = 0; x < dungeon->w; x++)
             {
-                printf("Room (%02d, %02d)\n", x, y);
                 for (int roomX = 0; roomX < roomWidth; roomX++)
                 {
                     // If this is a boundary
@@ -198,10 +216,11 @@ void saveDungeonRmd(dungeon_t* dungeon, int roomWidth, int roomHeight, bool carv
                                 keyType_t key = dungeon->rooms[x][y].doors[dc[d].door]->lock;
                                 if ((EMPTY_ROOM == key)
                                     // TODO place door on side of player progression, if possible?
-                                    || (dungeon->rooms[x][y].doors[DOOR_LEFT]
-                                        && (EMPTY_ROOM != dungeon->rooms[x][y].doors[DOOR_LEFT]->lock))
-                                    || (dungeon->rooms[x][y].doors[DOOR_UP]
-                                        && (EMPTY_ROOM != dungeon->rooms[x][y].doors[DOOR_UP]->lock)))
+                                    // || (dungeon->rooms[x][y].doors[DOOR_LEFT]
+                                    //     && (EMPTY_ROOM != dungeon->rooms[x][y].doors[DOOR_LEFT]->lock))
+                                    // || (dungeon->rooms[x][y].doors[DOOR_UP]
+                                    //     && (EMPTY_ROOM != dungeon->rooms[x][y].doors[DOOR_UP]->lock))
+                                )
                                 {
                                     // For empty rooms or if an adjacent door was already placed,
                                     // place floor according to partition
@@ -213,6 +232,12 @@ void saveDungeonRmd(dungeon_t* dungeon, int roomWidth, int roomHeight, bool carv
                                     fputc(keyTypeToRayType(key, true), file);
                                 }
                                 doorPlaced = true;
+
+                                doorScript_t* ds          = &doorScripts[x][y];
+                                ds->doors[ds->numDoors].x = (x * roomWidth) + roomX;
+                                ds->doors[ds->numDoors].y = (y * roomHeight) + roomY;
+                                ds->numDoors++;
+
                                 break;
                             }
                         }
@@ -378,8 +403,47 @@ void saveDungeonRmd(dungeon_t* dungeon, int roomWidth, int roomHeight, bool carv
             }
         }
     }
-    // No scripts
-    fputc(0, file);
+
+    // Write camera scripts, one for each room
+    fputc(dungeon->w * dungeon->h, file);
+
+    // For each room
+    for (int y = 0; y < dungeon->h; y++)
+    {
+        for (int x = 0; x < dungeon->w; x++)
+        {
+            // Get script
+            doorScript_t* ds = &doorScripts[x][y];
+
+            // Set camera target
+            ds->cam.x = x * roomWidth;
+            ds->cam.y = y * roomHeight;
+
+            // Two bytes of script length
+            uint16_t len = 8 + (2 * ds->numDoors);
+            fputc((len >> 8) * 0xFF, file);
+            fputc(len & 0xFF, file);
+
+            fputc(5, file); // IF ENTER
+
+            fputc(1, file);            // AND/OR (OR = 1)
+            fputc(ds->numDoors, file); // Number of cells
+            // Cell pairs
+            for (uint32_t dIdx = 0; dIdx < ds->numDoors; dIdx++)
+            {
+                fputc(ds->doors[dIdx].x, file);
+                fputc(ds->doors[dIdx].y, file);
+            }
+            fputc(1, file); // ORDER (ANY_ORDER = 1)
+            fputc(1, file); // ONE TIME (ALWAYS = 1)
+
+            fputc(14, file); // THEN CAMERA
+
+            fputc(ds->cam.x, file); // Camera X
+            fputc(ds->cam.y, file); // Camera Y
+        }
+    }
+
     fclose(file);
 }
 

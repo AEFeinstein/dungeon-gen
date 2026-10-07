@@ -264,4 +264,3 @@ typedef enum __attribute__((packed))
     OBJ_SCENERY_30           = (OBJ | SCENERY | 30),
     OBJ_SCENERY_31           = (OBJ | SCENERY | 31),
 } rayMapCellType_t;
-
