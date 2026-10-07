@@ -32,58 +32,28 @@ typedef struct
 const rayPair_t rayPairs[] = {
     {
         // EMPTY_ROOM
-        .door = BG_FLOOR,
+        .door = BG_FLOOR_DUNGEON,
         .key  = EMPTY,
     },
     {
         // KEY_1
-        .door = BG_DOOR,
-        .key  = OBJ_ITEM_BEAM,
+        .door = BG_DOOR_SCRIPT_LOCKED,
+        .key  = OBJ_ITEM_SHIELD,
     },
     {
         // KEY_2
-        .door = BG_DOOR_CHARGE,
-        .key  = OBJ_ITEM_CHARGE_BEAM,
+        .door = BG_DOOR_SCRIPT_LOCKED,
+        .key  = OBJ_ITEM_BOOMERANG,
     },
     {
         // KEY_3
-        .door = BG_DOOR_MISSILE,
-        .key  = OBJ_ITEM_MISSILE,
+        .door = BG_DOOR_SCRIPT_LOCKED,
+        .key  = OBJ_ITEM_LULLABY,
     },
     {
-        // KEY_4
-        .door = BG_FLOOR_LAVA,
-        .key  = OBJ_ITEM_SUIT_LAVA,
-    },
-    {
-        // KEY_5
-        .door = BG_DOOR_ICE,
-        .key  = OBJ_ITEM_ICE,
-    },
-    {
-        // KEY_6
-        .door = BG_FLOOR_WATER,
-        .key  = OBJ_ITEM_SUIT_WATER,
-    },
-    {
-        // KEY_7
-        .door = BG_DOOR_XRAY,
-        .key  = OBJ_ITEM_XRAY,
-    },
-    {
-        // KEY_8
-        .door = BG_DOOR_KEY_A,
-        .key  = OBJ_ITEM_KEY_A,
-    },
-    {
-        // KEY_9
-        .door = BG_DOOR_KEY_B,
-        .key  = OBJ_ITEM_KEY_B,
-    },
-    {
-        // KEY_10
-        .door = BG_DOOR_KEY_C,
-        .key  = OBJ_ITEM_KEY_C,
+        // KEY_4 thru KEY_13
+        .door = BG_DOOR_KEY_LOCKED,
+        .key  = OBJ_ITEM_KEY,
     },
 };
 
@@ -211,6 +181,7 @@ void saveDungeonRmd(dungeon_t* dungeon, int roomWidth, int roomHeight, bool carv
                             {
                                 keyType_t key = dungeon->rooms[x][y].doors[dc[d].door]->lock;
                                 if ((EMPTY_ROOM == key)
+                                    // TODO place door on side of player progression, if possible?
                                     || (dungeon->rooms[x][y].doors[DOOR_LEFT]
                                         && (EMPTY_ROOM != dungeon->rooms[x][y].doors[DOOR_LEFT]->lock))
                                     || (dungeon->rooms[x][y].doors[DOOR_UP]
@@ -315,8 +286,31 @@ void saveDungeonRmd(dungeon_t* dungeon, int roomWidth, int roomHeight, bool carv
                             }
                             else
                             {
-                                // Put a wall, style based on partition
-                                fputc(BG_WALL_1 + (dungeon->rooms[x][y].partition % (BG_WALL_5 - BG_WALL_1 + 1)), file);
+                                // Put a wall
+                                if ((roomX == 0) && (roomY == 0))
+                                {
+                                    fputc(BG_WALL_DUNGEON_UL, file);
+                                }
+                                else if ((roomX == (roomWidth - 1)) && (roomY == (roomHeight - 1)))
+                                {
+                                    fputc(BG_WALL_DUNGEON_DR, file);
+                                }
+                                else if ((roomX == 0) && (roomY == (roomHeight - 1)))
+                                {
+                                    fputc(BG_WALL_DUNGEON_DL, file);
+                                }
+                                else if ((roomX == (roomWidth - 1)) && (roomY == 0))
+                                {
+                                    fputc(BG_WALL_DUNGEON_UR, file);
+                                }
+                                else if ((roomX == 0) || (roomX == (roomWidth - 1)))
+                                {
+                                    fputc(BG_WALL_DUNGEON_V, file);
+                                }
+                                else if ((roomY == 0) || (roomY == (roomHeight - 1)))
+                                {
+                                    fputc(BG_WALL_DUNGEON_H, file);
+                                }
                             }
                         }
 
@@ -343,12 +337,14 @@ void saveDungeonRmd(dungeon_t* dungeon, int roomWidth, int roomHeight, bool carv
                             }
                             else if (room->isEnd)
                             {
-                                itemType = OBJ_ITEM_ARTIFACT;
+                                // Place exit at end
+                                itemType = OBJ_SCENERY_STAIRS;
                             }
-                            // else if (room->isDeadEnd)
-                            // {
-                            //     itemType = OBJ_ITEM_PICKUP_ENERGY;
-                            // }
+                            else if (room->isDeadEnd)
+                            {
+                                // Place mpoint at dead ends
+                                itemType = OBJ_ITEM_MPOINT_20;
+                            }
 
                             fputc(itemType, file);
                             if (EMPTY != itemType)
@@ -382,19 +378,19 @@ static void placeFloor(keyType_t partition, FILE* file)
     // Put some floor
     switch (keyTypeToRayType(partition, true))
     {
-        case BG_FLOOR_LAVA:
-        {
-            fputc(BG_FLOOR_LAVA, file);
-            break;
-        }
-        case BG_FLOOR_WATER:
-        {
-            fputc(BG_FLOOR_WATER, file);
-            break;
-        }
+        // case BG_FLOOR_LAVA:
+        // {
+        //     fputc(BG_FLOOR_LAVA, file);
+        //     break;
+        // }
+        // case BG_FLOOR_WATER:
+        // {
+        //     fputc(BG_FLOOR_WATER, file);
+        //     break;
+        // }
         default:
         {
-            fputc(BG_FLOOR, file);
+            fputc(BG_FLOOR_DUNGEON, file);
             break;
         }
     }

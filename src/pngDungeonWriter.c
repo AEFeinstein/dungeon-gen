@@ -109,65 +109,28 @@ void saveDungeonPng(dungeon_t* dungeon, const char* name)
  */
 static uint32_t roomColor(keyType_t type, bool isStart, bool isEnd, bool isDeadEnd)
 {
+    static uint32_t uniqueColors[] = {
+        0xff2f4f4f, 0xff7f0000, 0xff006400, 0xff00008b, 0xffff0000, 0xff00ced1, 0xffc71585, 0xff00ff00,
+        0xff00fa9a, 0xfff4a460, 0xff0000ff, 0xffd8bfd8, 0xffff00ff, 0xff1e90ff, 0xffffff54,
+    };
     if (isStart)
     {
-        return 0xFFFF0000;
+        return uniqueColors[0];
     }
     else if (isEnd)
     {
-        return 0xFF0000FF;
+        return uniqueColors[1];
     }
-    else
+    else if (EMPTY_ROOM == type)
     {
-        switch (type)
-        {
-            case EMPTY_ROOM:
-            {
-                break;
-            }
-            case KEY_1:
-            {
-                return 0xFF7766EE;
-            }
-            case KEY_2:
-            {
-                return 0xFF338822;
-            }
-            case KEY_3:
-            {
-                return 0xFFAA7744;
-            }
-            case KEY_4:
-            {
-                return 0xFF44BBCC;
-            }
-            case KEY_5:
-            {
-                return 0xFFEECC66;
-            }
-            case KEY_6:
-            {
-                return 0xFF7733AA;
-            }
-            case KEY_7:
-            case KEY_8:
-            case KEY_9:
-            case KEY_10:
-            case KEY_11:
-            case KEY_12:
-            case KEY_13:
-            case KEY_14:
-            case KEY_15:
-            case KEY_16:
-            {
-                return 0xFFBBBBBB; // TODO make unique
-            }
-        }
-
         if (isDeadEnd)
         {
             return 0xFF000000;
         }
+    }
+    else if ((2 + (type - KEY_1)) < (sizeof(uniqueColors) / sizeof(uniqueColors[0])))
+    {
+        return uniqueColors[2 + (type - KEY_1)];
     }
     return 0xFFFFFFFF;
 }

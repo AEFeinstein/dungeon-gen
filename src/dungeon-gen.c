@@ -39,13 +39,9 @@ void printAndExit(char* progName)
     fprintf(stderr, "    key_string represents the type and order of keys placed in the map.\n");
     fprintf(stderr, "    key_string may not contain duplicate chars.\n");
     fprintf(stderr, "    key_string is a list of the following chars.\n");
-    fprintf(stderr, "        g   = gun\n");
-    fprintf(stderr, "        c   = charge\n");
-    fprintf(stderr, "        m   = missile\n");
-    fprintf(stderr, "        i   = ice\n");
-    fprintf(stderr, "        x   = xray\n");
-    fprintf(stderr, "        l   = lava\n");
-    fprintf(stderr, "        w   = water\n");
+    fprintf(stderr, "        s   = shield\n");
+    fprintf(stderr, "        b   = boomerang\n");
+    fprintf(stderr, "        l   = lullaby\n");
     fprintf(stderr, "        0-9 = small key\n");
     exit(EXIT_FAILURE);
 }
@@ -157,46 +153,22 @@ int main(int argc, char** argv)
         keyStr[kIdx] = tolower(keyStr[kIdx]);
         switch (keyStr[kIdx])
         {
-            case 'g':
+            case 's':
             {
-                // KEY_1 is beam
+                // KEY_1 is shield
                 goals[kIdx] = KEY_1;
                 break;
             }
-            case 'c':
+            case 'b':
             {
-                // KEY_1 is charge beam
+                // KEY_1 is boomerang
                 goals[kIdx] = KEY_2;
-                break;
-            }
-            case 'm':
-            {
-                // KEY_2 is missiles
-                goals[kIdx] = KEY_3;
                 break;
             }
             case 'l':
             {
-                // KEY_3 is lava suit
-                goals[kIdx] = KEY_4;
-                break;
-            }
-            case 'i':
-            {
-                // KEY_4 is ice beam
-                goals[kIdx] = KEY_5;
-                break;
-            }
-            case 'w':
-            {
-                // KEY_5 is water suit
-                goals[kIdx] = KEY_6;
-                break;
-            }
-            case 'x':
-            {
-                // KEY_6 is xray visor
-                goals[kIdx] = KEY_7;
+                // KEY_2 is lullaby
+                goals[kIdx] = KEY_3;
                 break;
             }
             case '0':
@@ -210,8 +182,8 @@ int main(int argc, char** argv)
             case '8':
             case '9':
             {
-                // Numerals are KEY_8 through KEY_17
-                goals[kIdx] = KEY_8 + (keyStr[kIdx] - '0');
+                // Numerals are KEY_4 through KEY_13
+                goals[kIdx] = KEY_4 + (keyStr[kIdx] - '0');
                 break;
             }
             default:

@@ -39,9 +39,6 @@ typedef enum
     KEY_11,
     KEY_12,
     KEY_13,
-    KEY_14,
-    KEY_15,
-    KEY_16,
 } keyType_t;
 
 typedef enum
