@@ -35,7 +35,7 @@ typedef struct
 typedef struct
 {
     cell_t cam;
-    cell_t doors[4];
+    cell_t doors[5];
     uint32_t numDoors;
 } doorScript_t;
 
@@ -224,7 +224,8 @@ void saveDungeonRmd(dungeon_t* dungeon, int roomWidth, int roomHeight, bool carv
                                 {
                                     // For empty rooms or if an adjacent door was already placed,
                                     // place floor according to partition
-                                    placeFloor(dungeon->rooms[x][y].partition, file);
+                                    // placeFloor(dungeon->rooms[x][y].partition, file);
+                                    fputc(BG_DOOR_DUNGEON, file);
                                 }
                                 else
                                 {
@@ -363,11 +364,18 @@ void saveDungeonRmd(dungeon_t* dungeon, int roomWidth, int roomHeight, bool carv
                         // Otherwise put some floor
                         placeFloor(dungeon->rooms[x][y].partition, file);
 
+                        room_t* room = &dungeon->rooms[x][y];
+
                         // Place an object, maybe
-                        if ((roomX == roomWidth / 2) && (roomY == roomHeight / 2))
+                        if ((roomX == (roomWidth / 2) - 1) && (roomY == roomHeight / 2) && (room->isStart))
+                        {
+                            // Place exit to left of player at beginning
+                            fputc(OBJ_SCENERY_STAIRS, file);
+                            fputc(objIdx++, file);
+                        }
+                        else if ((roomX == roomWidth / 2) && (roomY == roomHeight / 2))
                         {
                             rayMapCellType_t itemType = EMPTY;
-                            room_t* room              = &dungeon->rooms[x][y];
                             if (EMPTY_ROOM != dungeon->rooms[x][y].treasure)
                             {
                                 itemType = keyTypeToRayType(room->treasure, false);
@@ -375,6 +383,12 @@ void saveDungeonRmd(dungeon_t* dungeon, int roomWidth, int roomHeight, bool carv
                             else if (room->isStart)
                             {
                                 itemType = OBJ_ENEMY_START_POINT;
+
+                                // Script camera upon entry
+                                doorScript_t* ds          = &doorScripts[x][y];
+                                ds->doors[ds->numDoors].x = (x * roomWidth) + roomX;
+                                ds->doors[ds->numDoors].y = (y * roomHeight) + roomY;
+                                ds->numDoors++;
                             }
                             else if (room->isEnd)
                             {
