@@ -418,8 +418,140 @@ void saveDungeonRmd(dungeon_t* dungeon, int roomWidth, int roomHeight, bool carv
         }
     }
 
-    // Write camera scripts, one for each room
-    fputc(dungeon->w * dungeon->h, file);
+    // Count number of actual doors
+    uint8_t doorCount = 0;
+    for (int d = 0; d < dungeon->numDoors; d++)
+    {
+        doorCount += (dungeon->doors[d].isDoor) ? 1 : 0;
+    }
+
+    // Write camera scripts, one for each room and one for each door
+    fputc((dungeon->w * dungeon->h) + doorCount, file);
+
+    // For each door
+    for (int d = 0; d < dungeon->numDoors; d++)
+    {
+        door_t* door = &dungeon->doors[d];
+
+        // If this is a real door
+        if (door->isDoor)
+        {
+            // Find the locations of the rooms between the doors
+            // Room 0 is always either above or to the left of room 1
+            cell_t room0loc;
+            cell_t room1loc;
+            for (int y = 0; y < dungeon->h; y++)
+            {
+                for (int x = 0; x < dungeon->w; x++)
+                {
+                    if (door->rooms[0] == &dungeon->rooms[x][y])
+                    {
+                        room0loc.x = x;
+                        room0loc.y = y;
+                    }
+                    else if (door->rooms[1] == &dungeon->rooms[x][y])
+                    {
+                        room1loc.x = x;
+                        room1loc.y = y;
+                    }
+                }
+            }
+
+            bool isHorz = (room0loc.x != room1loc.x);
+
+            // Make the list of cells which trigger door closing
+            cell_t doorCells[2];
+            cell_t triggerCells[6];
+            if (isHorz)
+            {
+                // Door is on right side of room0
+                doorCells[0].x = (roomWidth * room0loc.x) + dc[3].xDoor;
+                doorCells[0].y = (roomHeight * room0loc.y) + dc[3].yDoor;
+
+                triggerCells[0].x = doorCells[0].x + 2;
+                triggerCells[0].y = doorCells[0].y;
+
+                triggerCells[1].x = doorCells[0].x + 1;
+                triggerCells[1].y = doorCells[0].y + 1;
+
+                triggerCells[2].x = doorCells[0].x + 1;
+                triggerCells[2].y = doorCells[0].y - 1;
+
+                // Door is on the left side of room 1
+                doorCells[1].x = (roomWidth * room1loc.x) + dc[2].xDoor;
+                doorCells[1].y = (roomHeight * room1loc.y) + dc[2].yDoor;
+
+                triggerCells[3].x = doorCells[1].x - 2;
+                triggerCells[3].y = doorCells[1].y;
+
+                triggerCells[4].x = doorCells[1].x - 1;
+                triggerCells[4].y = doorCells[1].y - 1;
+
+                triggerCells[5].x = doorCells[1].x - 1;
+                triggerCells[5].y = doorCells[1].y + 1;
+            }
+            else
+            {
+                // Door is on bottom of room 0
+                doorCells[0].x = (roomWidth * room0loc.x) + dc[1].xDoor;
+                doorCells[0].y = (roomHeight * room0loc.y) + dc[1].yDoor;
+
+                triggerCells[0].x = doorCells[0].x;
+                triggerCells[0].y = doorCells[0].y - 2;
+
+                triggerCells[1].x = doorCells[0].x - 1;
+                triggerCells[1].y = doorCells[0].y - 1;
+
+                triggerCells[2].x = doorCells[0].x + 1;
+                triggerCells[2].y = doorCells[0].y - 1;
+
+                // Door is on the top of room 1
+                doorCells[1].x = (roomWidth * room1loc.x) + dc[0].xDoor;
+                doorCells[1].y = (roomHeight * room1loc.y) + dc[0].yDoor;
+
+                triggerCells[3].x = doorCells[1].x;
+                triggerCells[3].y = doorCells[1].y + 2;
+
+                triggerCells[4].x = doorCells[1].x - 1;
+                triggerCells[4].y = doorCells[1].y + 1;
+
+                triggerCells[5].x = doorCells[1].x + 1;
+                triggerCells[5].y = doorCells[1].y + 1;
+            }
+
+            uint8_t numCells = (sizeof(triggerCells) / sizeof(triggerCells[0]));
+            uint8_t numDoors = (sizeof(doorCells) / sizeof(doorCells[0]));
+
+            // Two bytes of script length
+            uint16_t len = 7 + 2 * (numCells + numDoors);
+            fputc((len >> 8) * 0xFF, file);
+            fputc(len & 0xFF, file);
+
+            fputc(5, file); // IF ENTER
+
+            fputc(1, file);        // AND/OR (OR = 1)
+            fputc(numCells, file); // Number of cells
+            // Cell pairs
+            for (uint32_t cIdx = 0; cIdx < numCells; cIdx++)
+            {
+                fputc(triggerCells[cIdx].x, file);
+                fputc(triggerCells[cIdx].y, file);
+            }
+            fputc(1, file); // ORDER (ANY_ORDER = 1)
+            fputc(1, file); // ONE TIME (ALWAYS = 1)
+
+            fputc(8, file); // THEN CLOSE
+
+            // One byte of length
+            fputc(numDoors, file);
+
+            for (int dIdx = 0; dIdx < numDoors; dIdx++)
+            {
+                fputc(doorCells[dIdx].x, file); // DOOR X
+                fputc(doorCells[dIdx].y, file); // DOOR Y
+            }
+        }
+    }
 
     // For each room
     for (int y = 0; y < dungeon->h; y++)
